@@ -1,0 +1,20 @@
+{
+  "name": "pgs-eventi-live-backend",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.mjs",
+    "start": "node src/server.mjs",
+    "build": "node --check src/server.mjs && node --check src/events-store.mjs",
+    "db:setup": "node scripts/setup-atlas.mjs",
+    "db:seed": "node scripts/setup-atlas.mjs --seed"
+  },
+  "dependencies": {
+    "mongodb": "^6.11.0",
+    "zod": "^3.24.1"
+  }
+}

@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: pgs-eventi-live-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 22.15.1
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: pgs-eventi-live
+      - key: FRONTEND_ORIGINS
+        value: https://eventilive.pgsemiliaromagna.org
+      - key: BACKEND_SERVICE_TOKEN
+        sync: false

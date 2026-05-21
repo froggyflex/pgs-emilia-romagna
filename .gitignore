@@ -1,0 +1,14 @@
+.next
+node_modules
+.npm-cache
+.env
+.env*.local
+dist
+coverage
+*.tsbuildinfo
+dev-server*.log
+*-dev*.log
+frontend/public/uploads/*
+!frontend/public/uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
