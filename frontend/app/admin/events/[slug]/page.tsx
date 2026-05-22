@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AdminEventEditor } from "@/components/admin-event-editor";
-import { auth, isAdminEmail } from "@/auth";
+import { isAdminEmail, safeAuth } from "@/auth";
 import { isAuthBypassed } from "@/lib/auth-flags";
 import { getEventBySlug, listComments } from "@/lib/backend-api";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminEventPage({ params }: { params: Promise<{ slug: string }> }) {
   const bypassAuth = isAuthBypassed();
-  const session = bypassAuth ? null : await auth();
+  const session = bypassAuth ? null : await safeAuth();
 
   if (!bypassAuth && !isAdminEmail(session?.user?.email)) {
     redirect("/");

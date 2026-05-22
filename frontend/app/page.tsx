@@ -51,6 +51,9 @@ export default async function Home() {
           </div>
 
           <div className="event-list">
+            {events.length === 0 ? (
+              <div className="empty">Nessun evento disponibile in questo momento.</div>
+            ) : null}
             {events.map((event) => {
               const isLive = event.matches.some((match) => match.status === "live");
 

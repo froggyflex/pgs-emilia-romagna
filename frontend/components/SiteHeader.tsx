@@ -1,12 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { auth, isAdminEmail } from "@/auth";
+import { isAdminEmail, safeAuth } from "@/auth";
 import { signInWithGoogle, signOutUser } from "@/app/actions";
 import { isAuthBypassed } from "@/lib/auth-flags";
 
 export async function SiteHeader() {
   const bypassAuth = isAuthBypassed();
-  const session = bypassAuth ? null : await auth();
+  const session = bypassAuth ? null : await safeAuth();
   const isAdmin = bypassAuth || isAdminEmail(session?.user?.email);
 
   return (

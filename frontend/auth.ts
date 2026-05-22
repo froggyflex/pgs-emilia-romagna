@@ -21,6 +21,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   }
 });
 
+export async function safeAuth() {
+  try {
+    return await auth();
+  } catch (error) {
+    console.error("Auth session lookup failed.", error);
+    return null;
+  }
+}
+
 export function isAdminEmail(email?: string | null) {
   if (!email) return false;
   const admins = (process.env.ADMIN_EMAILS || "")
