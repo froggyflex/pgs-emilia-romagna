@@ -43,6 +43,9 @@ export type MediaItem = {
   caption?: string;
   commentsEnabled: boolean;
   likes?: number;
+  authorName?: string;
+  authorEmail?: string;
+  authorImage?: string;
   createdAt: string;
 };
 

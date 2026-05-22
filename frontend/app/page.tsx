@@ -2,6 +2,9 @@ import Link from "next/link";
 import { CalendarDays, MapPin, Radio, ShieldCheck, Trophy, Video } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { listEvents } from "@/lib/backend-api";
+import { signInAdminWithGoogle } from "@/app/actions";
+import { isAdminEmail, safeAuth } from "@/auth";
+import { isAuthBypassed } from "@/lib/auth-flags";
 import type { EventRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +21,8 @@ function latestFeed(event: EventRecord) {
 
 export default async function Home() {
   const events = await listEvents();
+  const session = isAuthBypassed() ? null : await safeAuth();
+  const isAdmin = isAuthBypassed() || isAdminEmail(session?.user?.email);
   const liveEvents = events.filter((event) => event.matches.some((match) => match.status === "live")).length;
   const mediaCount = events.reduce((total, event) => total + event.media.length, 0);
   const matchCount = events.reduce((total, event) => total + event.matches.length, 0);
@@ -32,7 +37,13 @@ export default async function Home() {
             <h1>Eventi live</h1>
             <p className="lead">Scegli una manifestazione e segui feed, calendario, classifiche, media, commenti e streaming dedicati.</p>
           </div>
-          <Link className="ghost-button" href="/admin"><ShieldCheck size={18} /> Area operatori</Link>
+          {isAdmin ? (
+            <Link className="ghost-button" href="/admin"><ShieldCheck size={18} /> Area operatori</Link>
+          ) : !session?.user ? (
+            <form action={signInAdminWithGoogle}>
+              <button className="ghost-button" type="submit"><ShieldCheck size={18} /> Area operatori</button>
+            </form>
+          ) : null}
         </section>
 
         <section className="home-overview">

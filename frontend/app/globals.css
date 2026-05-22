@@ -85,6 +85,47 @@ button {
   flex-wrap: wrap;
 }
 
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+  min-height: 40px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: #344054;
+  font-weight: 800;
+}
+
+.profile-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--red));
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .nav a,
 .button,
 .ghost-button,
@@ -800,6 +841,38 @@ h3 {
   gap: 12px;
 }
 
+.community-composer {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid rgba(21, 66, 127, 0.18);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f8fbff, #fff);
+}
+
+.community-composer.locked,
+.interaction-lock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #344054;
+  font-weight: 800;
+}
+
+.interaction-lock {
+  min-height: 46px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.compact-dropzone {
+  padding: 18px;
+}
+
 .media-title-row {
   display: flex;
   align-items: flex-start;
@@ -809,6 +882,13 @@ h3 {
 
 .media-title-row p {
   margin-bottom: 0;
+}
+
+.media-title-row .media-author {
+  margin-top: 5px;
+  color: var(--blue);
+  font-size: 0.88rem;
+  font-weight: 800;
 }
 
 .like-button {
@@ -1420,6 +1500,11 @@ h3 {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .nav,
+  .profile-chip {
+    max-width: 100%;
   }
 
   .hero,

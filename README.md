@@ -11,6 +11,8 @@ Atlas stores event data, comments, likes, and uploaded media files. Vercel serve
 
 The browser never receives the Atlas URI or the backend service token. Authenticated admin/comment writes go through Vercel API routes, then Vercel calls Render with the shared `BACKEND_SERVICE_TOKEN`.
 
+`ADMIN_EMAILS` controls operator access. Signed-in non-admin users can comment and publish photo/video posts to published event pages, but cannot open or write through the admin event editor.
+
 ## Local Setup
 
 1. Install workspace dependencies:

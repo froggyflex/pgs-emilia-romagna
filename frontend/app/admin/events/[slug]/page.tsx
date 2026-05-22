@@ -11,7 +11,7 @@ export default async function AdminEventPage({ params }: { params: Promise<{ slu
   const bypassAuth = isAuthBypassed();
   const session = bypassAuth ? null : await safeAuth();
 
-  if (!bypassAuth && !isAdminEmail(session?.user?.email)) {
+  if (!bypassAuth && (!session?.user?.email || !isAdminEmail(session.user.email))) {
     redirect("/");
   }
 

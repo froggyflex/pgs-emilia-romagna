@@ -9,9 +9,10 @@ type Props = {
   targetId: string;
   comments: Comment[];
   compact?: boolean;
+  viewerAuthenticated: boolean;
 };
 
-export function CommentBox({ eventId, targetType, targetId, comments: initialComments, compact = false }: Props) {
+export function CommentBox({ eventId, targetType, targetId, comments: initialComments, compact = false, viewerAuthenticated }: Props) {
   const commentInputId = useId();
   const [body, setBody] = useState("");
   const [comments, setComments] = useState(initialComments);
@@ -45,16 +46,22 @@ export function CommentBox({ eventId, targetType, targetId, comments: initialCom
 
   return (
     <div className={compact ? "compact-comments" : ""}>
-      <div className="field">
-        <label htmlFor={commentInputId}>Aggiungi commento</label>
-        <textarea id={commentInputId} value={body} onChange={(event) => setBody(event.target.value)} placeholder="Scrivi un commento..." />
-      </div>
-      <div className="toolbar" style={{ marginTop: 10 }}>
-        <button className="button" type="button" onClick={submit} disabled={isPending || body.trim().length === 0}>
-          Pubblica
-        </button>
-        {message ? <span className="muted">{message}</span> : null}
-      </div>
+      {viewerAuthenticated ? (
+        <>
+          <div className="field">
+            <label htmlFor={commentInputId}>Aggiungi commento</label>
+            <textarea id={commentInputId} value={body} onChange={(event) => setBody(event.target.value)} placeholder="Scrivi un commento..." />
+          </div>
+          <div className="toolbar" style={{ marginTop: 10 }}>
+            <button className="button" type="button" onClick={submit} disabled={isPending || body.trim().length === 0}>
+              Pubblica
+            </button>
+            {message ? <span className="muted">{message}</span> : null}
+          </div>
+        </>
+      ) : (
+        <div className="interaction-lock">Accedi con Google per commentare.</div>
+      )}
       {comments.length === 0 ? <div className="empty">Nessun commento pubblicato.</div> : null}
       {comments.map((comment) => (
         <article className="comment" key={comment.id}>

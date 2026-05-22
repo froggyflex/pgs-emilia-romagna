@@ -4,6 +4,7 @@ import { CalendarDays, MapPin, MessageCircle, Radio, Trophy, Video } from "lucid
 import type { Comment, EventRecord, MatchStatus, RankingRow } from "@/lib/types";
 import { CommentBox } from "./comment-box";
 import { MediaCard } from "./media-card";
+import { MediaContributionForm } from "./media-contribution-form";
 
 const statusLabels: Record<MatchStatus, string> = {
   scheduled: "In programma",
@@ -49,11 +50,13 @@ function formatDate(value: string) {
 export async function EventPublicView({
   event,
   comments,
-  mediaComments
+  mediaComments,
+  viewerAuthenticated
 }: {
   event: EventRecord;
   comments: Comment[];
   mediaComments: Record<string, Comment[]>;
+  viewerAuthenticated: boolean;
 }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eventilive.pgsemiliaromagna.org";
   const eventUrl = `${siteUrl}/events/${event.slug}`;
@@ -257,9 +260,10 @@ export async function EventPublicView({
               <p className="muted">Contenuti commentabili con like e conversazioni dedicate.</p>
             </div>
           </div>
+          <MediaContributionForm eventSlug={event.slug} viewerAuthenticated={viewerAuthenticated} />
           <div className="media-grid">
             {event.media.map((item) => (
-              <MediaCard eventId={event.slug} item={item} comments={mediaComments[item.id] || []} key={item.id} />
+              <MediaCard eventId={event.slug} item={item} comments={mediaComments[item.id] || []} viewerAuthenticated={viewerAuthenticated} key={item.id} />
             ))}
           </div>
         </div>
@@ -269,7 +273,7 @@ export async function EventPublicView({
         <div className="card-body">
           <span className="small-label">Discussione generale</span>
           <h2 className="icon-heading"><MessageCircle size={22} /> Commenti evento</h2>
-          <CommentBox eventId={event.slug} targetType="event" targetId={event.slug} comments={comments} />
+          <CommentBox eventId={event.slug} targetType="event" targetId={event.slug} comments={comments} viewerAuthenticated={viewerAuthenticated} />
         </div>
       </section>
     </>

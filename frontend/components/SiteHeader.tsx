@@ -21,9 +21,22 @@ export async function SiteHeader() {
         {bypassAuth ? (
           <span className="status">Auth bypass</span>
         ) : session?.user ? (
-          <form action={signOutUser}>
-            <button className="ghost-button" type="submit">Esci</button>
-          </form>
+          <>
+            <span className="profile-chip" title={session.user.email || session.user.name || "Profilo"}>
+              <span className="profile-avatar">
+                {session.user.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={session.user.image} alt="" />
+                ) : (
+                  getInitials(session.user.name, session.user.email)
+                )}
+              </span>
+              <span className="profile-name">{session.user.name || session.user.email}</span>
+            </span>
+            <form action={signOutUser}>
+              <button className="ghost-button" type="submit">Esci</button>
+            </form>
+          </>
         ) : (
           <form action={signInWithGoogle}>
             <button className="button" type="submit">Accedi con Google</button>
@@ -32,4 +45,11 @@ export async function SiteHeader() {
       </nav>
     </header>
   );
+}
+
+function getInitials(name?: string | null, email?: string | null) {
+  const source = name?.trim() || email?.split("@")[0] || "U";
+  const words = source.split(/[\s._-]+/).filter(Boolean);
+  const initials = words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("");
+  return initials || "U";
 }

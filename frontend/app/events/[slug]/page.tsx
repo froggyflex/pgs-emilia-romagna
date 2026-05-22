@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { EventPublicView } from "@/components/EventPublicView";
 import { getEventBySlug, listComments } from "@/lib/backend-api";
+import { safeAuth } from "@/auth";
+import { isAuthBypassed } from "@/lib/auth-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +23,14 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
       allComments.filter((comment) => comment.targetType === "media" && comment.targetId === item.id)
     ])
   );
+  const session = isAuthBypassed() ? null : await safeAuth();
+  const viewerAuthenticated = isAuthBypassed() || Boolean(session?.user?.email);
 
   return (
     <main className="shell">
       <SiteHeader />
       <div className="page">
-        <EventPublicView event={event} comments={comments} mediaComments={mediaComments} />
+        <EventPublicView event={event} comments={comments} mediaComments={mediaComments} viewerAuthenticated={viewerAuthenticated} />
       </div>
     </main>
   );

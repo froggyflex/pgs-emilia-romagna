@@ -9,6 +9,7 @@ import { Readable } from "node:stream";
 import { getAllowedOrigins, isAuthBypassed } from "./env.mjs";
 import { getDb } from "./db.mjs";
 import {
+  addEventMedia,
   addComment,
   deleteEvent,
   getEventBySlug,
@@ -86,6 +87,13 @@ createServer(async (request, response) => {
       }
 
       sendJson(response, 200, await upsertEvent(parsed.data));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname.match(/^\/api\/events\/[^/]+\/media$/)) {
+      if (!requireTrustedWrite(request, response)) return;
+      const slug = decodeURIComponent(url.pathname.split("/")[3]);
+      await handleEventMediaUpload(request, response, slug);
       return;
     }
 
@@ -203,6 +211,64 @@ async function handleUploads(request, response) {
   sendJson(response, 200, { files: uploaded, url: uploaded[0]?.url });
 }
 
+async function handleEventMediaUpload(request, response, eventSlug) {
+  const formData = await readFormData(request);
+  const authorName = String(formData.get("authorName") || "").trim();
+  const authorEmail = String(formData.get("authorEmail") || "").trim();
+  const authorImage = String(formData.get("authorImage") || "").trim();
+  const caption = String(formData.get("caption") || "").trim().slice(0, 500);
+  const files = formData.getAll("file").filter((file) => file instanceof File);
+
+  if (!authorName || !authorEmail) {
+    sendJson(response, 401, { message: "Signed-in author required" });
+    return;
+  }
+
+  if (files.length === 0) {
+    sendJson(response, 400, { message: "No media received" });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const mediaItems = [];
+
+  for (const file of files) {
+    if (!allowedTypes.has(file.type)) {
+      sendJson(response, 400, { message: `Unsupported media type: ${file.type}` });
+      return;
+    }
+
+    if (file.size > 120 * 1024 * 1024) {
+      sendJson(response, 400, { message: `${file.name} is too large` });
+      return;
+    }
+
+    const storedPath = await storeUpload(file);
+    mediaItems.push({
+      id: randomUUID(),
+      type: file.type.startsWith("video/") ? "video" : "photo",
+      title: file.name.replace(/\.[^.]+$/, ""),
+      url: `${requestOrigin(request)}/uploads/${storedPath}`,
+      caption,
+      commentsEnabled: true,
+      likes: 0,
+      authorName,
+      authorEmail,
+      ...(authorImage ? { authorImage } : {}),
+      createdAt: now
+    });
+  }
+
+  const saved = await addEventMedia(eventSlug, mediaItems);
+
+  if (!saved) {
+    sendJson(response, 404, { message: "Published event not found" });
+    return;
+  }
+
+  sendJson(response, 200, { media: saved });
+}
+
 async function serveUpload(requestPath, response) {
   const uploadId = path.basename(requestPath);
 
@@ -239,6 +305,7 @@ async function storeUpload(file) {
   }
 
   const fileName = `${randomUUID()}${extensionForType(file.type)}`;
+  await mkdir(uploadsDir, { recursive: true });
   await writeFile(path.join(uploadsDir, fileName), Buffer.from(await file.arrayBuffer()));
   return fileName;
 }

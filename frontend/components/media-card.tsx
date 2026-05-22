@@ -6,7 +6,7 @@ import { Heart, MessageCircle } from "lucide-react";
 import type { Comment, MediaItem } from "@/lib/types";
 import { CommentBox } from "./comment-box";
 
-export function MediaCard({ eventId, item, comments }: { eventId: string; item: MediaItem; comments: Comment[] }) {
+export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { eventId: string; item: MediaItem; comments: Comment[]; viewerAuthenticated: boolean }) {
   const [likes, setLikes] = useState(item.likes || 0);
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -44,6 +44,7 @@ export function MediaCard({ eventId, item, comments }: { eventId: string; item: 
           <div>
             <strong>{item.title}</strong>
             <p className="muted">{item.caption}</p>
+            {item.authorName ? <p className="media-author">Condiviso da {item.authorName}</p> : null}
           </div>
           <button className="like-button" type="button" onClick={like} disabled={isPending} aria-label="Metti like">
             <Heart size={17} /> {likes}
@@ -54,7 +55,7 @@ export function MediaCard({ eventId, item, comments }: { eventId: string; item: 
         </div>
         {message ? <p className="muted">{message}</p> : null}
         {item.commentsEnabled ? (
-          <CommentBox eventId={eventId} targetType="media" targetId={item.id} comments={comments} compact />
+          <CommentBox eventId={eventId} targetType="media" targetId={item.id} comments={comments} compact viewerAuthenticated={viewerAuthenticated} />
         ) : (
           <div className="empty">Commenti disattivati per questo contenuto.</div>
         )}

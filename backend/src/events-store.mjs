@@ -130,6 +130,32 @@ export async function incrementMediaLike(eventSlug, mediaId) {
   return typeof media?.likes === "number" ? media.likes : null;
 }
 
+export async function addEventMedia(eventSlug, mediaItems) {
+  const db = await getDb();
+
+  if (!db) {
+    const event = getMemoryEvents().find((item) => item.slug === eventSlug && item.status === "published");
+
+    if (!event) {
+      return null;
+    }
+
+    event.media = [...mediaItems, ...event.media];
+    event.updatedAt = new Date().toISOString();
+    return mediaItems;
+  }
+
+  const result = await db.collection(EVENTS).updateOne(
+    { slug: eventSlug, status: "published" },
+    {
+      $push: { media: { $each: mediaItems, $position: 0 } },
+      $set: { updatedAt: new Date().toISOString() }
+    }
+  );
+
+  return result.matchedCount ? mediaItems : null;
+}
+
 export async function listComments(eventId, targetType, targetId) {
   const db = await getDb();
 
