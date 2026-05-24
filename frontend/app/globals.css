@@ -195,6 +195,10 @@ button {
   border-color: #fecdd6;
 }
 
+.danger-ghost {
+  color: #b42318;
+}
+
 .page {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;

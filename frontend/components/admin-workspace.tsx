@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarPlus, Eye, FilePenLine, Radio, Search, Trophy, Video } from "lucide-react";
+import { CalendarPlus, Eye, FilePenLine, Radio, Search, Trash2, Trophy, Video } from "lucide-react";
 import { createDraftEvent } from "@/lib/event-template";
 import type { EventRecord, EventStatus } from "@/lib/types";
 
@@ -22,6 +22,7 @@ export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | EventStatus>("all");
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
+  const [confirmDeleteSlug, setConfirmDeleteSlug] = useState<string | null>(null);
   const [isCreating, startCreate] = useTransition();
 
   const filteredEvents = useMemo(() => {
@@ -55,6 +56,19 @@ export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[
     const updated = await saveEvent({ ...event, status });
     setEvents((items) => items.map((item) => (item.slug === event.slug ? updated : item)));
     setPendingSlug(null);
+  }
+
+  async function deleteEvent(event: EventRecord) {
+    if (confirmDeleteSlug !== event.slug) {
+      setConfirmDeleteSlug(event.slug);
+      return;
+    }
+
+    setPendingSlug(event.slug);
+    await deleteSavedEvent(event._id || event.slug);
+    setEvents((items) => items.filter((item) => item.slug !== event.slug));
+    setPendingSlug(null);
+    setConfirmDeleteSlug(null);
   }
 
   return (
@@ -130,6 +144,14 @@ export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[
                 </label>
                 <Link className="ghost-button" href={`/events/${event.slug}`}><Eye size={17} /> Pubblico</Link>
                 <Link className="button" href={`/admin/events/${event.slug}`}><FilePenLine size={17} /> Gestisci</Link>
+                <button
+                  className={confirmDeleteSlug === event.slug ? "danger-button" : "ghost-button danger-ghost"}
+                  type="button"
+                  disabled={pendingSlug === event.slug}
+                  onClick={() => deleteEvent(event)}
+                >
+                  <Trash2 size={17} /> {confirmDeleteSlug === event.slug ? "Conferma elimina" : "Elimina"}
+                </button>
               </div>
             </article>
           ))}
@@ -160,4 +182,14 @@ async function saveEvent(event: EventRecord) {
   }
 
   return await response.json() as EventRecord;
+}
+
+async function deleteSavedEvent(id: string) {
+  const response = await fetch(`/api/events/${encodeURIComponent(id)}`, {
+    method: "DELETE"
+  });
+
+  if (!response.ok) {
+    throw new Error("Event delete failed");
+  }
 }
