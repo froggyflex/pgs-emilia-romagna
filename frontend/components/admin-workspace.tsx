@@ -112,6 +112,7 @@ export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[
                 <p className="muted">{event.subtitle}</p>
                 <div className="event-row-stats">
                   <span><CalendarPlus size={15} /> {event.matches.length} partite</span>
+                  <span><Radio size={15} /> {event.sections?.length || 1} eventi interni</span>
                   <span><Trophy size={15} /> {event.rankings.length} righe classifica</span>
                   <span><Video size={15} /> {event.media.length} media</span>
                 </div>

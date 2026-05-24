@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 
+export const dynamic = "force-dynamic";
+
 export default function NotFound() {
   return (
     <main className="shell">

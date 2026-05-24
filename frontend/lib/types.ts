@@ -2,6 +2,30 @@ export type MatchStatus = "scheduled" | "live" | "finished" | "postponed";
 
 export type EventStatus = "draft" | "published" | "archived";
 
+export type EventSectionType = "campionato" | "intrattenimento";
+
+export type ProgramItem = {
+  id: string;
+  time: string;
+  title: string;
+  description?: string;
+  location?: string;
+};
+
+export type EventSection = {
+  id: string;
+  slug: string;
+  type: EventSectionType;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  startsAt?: string;
+  endsAt?: string;
+  location?: string;
+  heroImage?: string;
+  programItems?: ProgramItem[];
+};
+
 export type Team = {
   id: string;
   name: string;
@@ -11,6 +35,7 @@ export type Team = {
 
 export type Match = {
   id: string;
+  sectionId?: string;
   category: string;
   homeTeam: string;
   awayTeam: string;
@@ -25,6 +50,7 @@ export type Match = {
 
 export type RankingRow = {
   id: string;
+  sectionId?: string;
   category: string;
   team: string;
   played: number;
@@ -37,6 +63,7 @@ export type RankingRow = {
 
 export type MediaItem = {
   id: string;
+  sectionId?: string;
   type: "photo" | "video";
   title: string;
   url: string;
@@ -52,6 +79,7 @@ export type MediaItem = {
 export type FeedPost = {
   id: string;
   eventId: string;
+  sectionId?: string;
   title: string;
   body: string;
   type: "announcement" | "ranking" | "media" | "live";
@@ -86,6 +114,7 @@ export type EventRecord = {
   logoImage: string;
   streamUrl?: string;
   qrUrl?: string;
+  sections?: EventSection[];
   categories: string[];
   teams: Team[];
   matches: Match[];

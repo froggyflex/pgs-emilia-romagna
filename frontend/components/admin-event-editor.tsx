@@ -7,13 +7,16 @@ import {
   CalendarPlus,
   Eye,
   ImagePlus,
+  PartyPopper,
+  Plus,
   Radio,
   Save,
+  Trophy,
   Trash2
 } from "lucide-react";
-import type { Comment, EventRecord, EventStatus, FeedPost, Match, MediaItem, RankingRow } from "@/lib/types";
+import type { Comment, EventRecord, EventSection, EventSectionType, EventStatus, FeedPost, Match, MediaItem, ProgramItem, RankingRow } from "@/lib/types";
 
-type Tab = "details" | "matches" | "rankings" | "media" | "feed";
+type Tab = "details" | "sections" | "matches" | "rankings" | "media" | "feed";
 
 const statusLabels: Record<EventStatus, string> = {
   draft: "Bozza",
@@ -22,7 +25,7 @@ const statusLabels: Record<EventStatus, string> = {
 };
 
 export function AdminEventEditor({ event: initialEvent, comments }: { event: EventRecord; comments: Comment[] }) {
-  const [event, setEvent] = useState(initialEvent);
+  const [event, setEvent] = useState(() => normalizeEventSections(initialEvent));
   const [tab, setTab] = useState<Tab>("details");
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -68,6 +71,7 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
       <section className="editor-layout">
         <aside className="editor-sidebar">
           <button className={`side-tab ${tab === "details" ? "active" : ""}`} type="button" onClick={() => setTab("details")}>Dettagli</button>
+          <button className={`side-tab ${tab === "sections" ? "active" : ""}`} type="button" onClick={() => setTab("sections")}>Eventi interni</button>
           <button className={`side-tab ${tab === "matches" ? "active" : ""}`} type="button" onClick={() => setTab("matches")}>Partite</button>
           <button className={`side-tab ${tab === "rankings" ? "active" : ""}`} type="button" onClick={() => setTab("rankings")}>Classifiche</button>
           <button className={`side-tab ${tab === "media" ? "active" : ""}`} type="button" onClick={() => setTab("media")}>Foto e video</button>
@@ -76,6 +80,7 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
 
         <div className="editor-panel">
           {tab === "details" ? <DetailsEditor event={event} onChange={setEvent} /> : null}
+          {tab === "sections" ? <SectionsEditor event={event} onChange={setEvent} /> : null}
           {tab === "matches" ? <MatchesEditor event={event} onChange={setEvent} /> : null}
           {tab === "rankings" ? <RankingsEditor event={event} onChange={setEvent} /> : null}
           {tab === "media" ? <MediaEditor event={event} onChange={setEvent} comments={comments} /> : null}
@@ -83,6 +88,149 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
         </div>
       </section>
     </>
+  );
+}
+
+function SectionsEditor({ event, onChange }: EditorProps) {
+  const sections = getEditableSections(event);
+
+  function addSection(type: EventSectionType) {
+    const title = type === "campionato" ? "Nuovo campionato" : "Nuovo intrattenimento";
+    const section: EventSection = {
+      id: crypto.randomUUID(),
+      slug: slugify(title),
+      type,
+      title,
+      subtitle: type === "campionato" ? "Partite, risultati e classifiche" : "Programma e informazioni per il pubblico",
+      description: "",
+      startsAt: event.startsAt,
+      endsAt: event.endsAt,
+      location: event.location,
+      heroImage: event.coverImage,
+      programItems: type === "intrattenimento" ? [] : undefined
+    };
+
+    onChange({ ...event, sections: [...sections, section] });
+  }
+
+  function patchSection(id: string, patch: Partial<EventSection>) {
+    onChange({
+      ...event,
+      sections: sections.map((section) => (section.id === id ? { ...section, ...patch } : section))
+    });
+  }
+
+  function removeSection(id: string) {
+    onChange({ ...event, sections: sections.filter((section) => section.id !== id) });
+  }
+
+  function addProgramItem(section: EventSection) {
+    const item: ProgramItem = {
+      id: crypto.randomUUID(),
+      time: "20:00",
+      title: "Nuovo punto programma",
+      description: "",
+      location: section.location || event.location
+    };
+    patchSection(section.id, { programItems: [...(section.programItems || []), item] });
+  }
+
+  function patchProgramItem(section: EventSection, itemId: string, patch: Partial<ProgramItem>) {
+    patchSection(section.id, {
+      programItems: (section.programItems || []).map((item) => (item.id === itemId ? { ...item, ...patch } : item))
+    });
+  }
+
+  function removeProgramItem(section: EventSection, itemId: string) {
+    patchSection(section.id, { programItems: (section.programItems || []).filter((item) => item.id !== itemId) });
+  }
+
+  return (
+    <div>
+      <PanelHeader
+        title="Eventi interni"
+        text="Organizza la manifestazione principale in sezioni: campionato per gare/classifiche e intrattenimento per serate, cerimonie o momenti pubblici."
+        action={(
+          <div className="toolbar section-actions">
+            <button className="ghost-button" type="button" onClick={() => addSection("campionato")}><Trophy size={17} /> Campionato</button>
+            <button className="button" type="button" onClick={() => addSection("intrattenimento")}><PartyPopper size={17} /> Intrattenimento</button>
+          </div>
+        )}
+      />
+      <div className="stack">
+        {sections.length === 0 ? <div className="empty">Nessun evento interno configurato.</div> : null}
+        {sections.map((section) => (
+          <div className={`editor-item section-editor-card section-editor-${section.type}`} key={section.id}>
+            <div className="item-toolbar">
+              <div>
+                <span className="status">
+                  {section.type === "campionato" ? <Trophy size={14} /> : <PartyPopper size={14} />}
+                  {section.type === "campionato" ? "Campionato" : "Intrattenimento"}
+                </span>
+                <strong>{section.title}</strong>
+                <p className="muted">{section.subtitle || "Sezione della manifestazione"}</p>
+              </div>
+              <button className="icon-danger" type="button" onClick={() => removeSection(section.id)} aria-label="Elimina evento interno"><Trash2 size={17} /></button>
+            </div>
+
+            <div className="form-grid compact">
+              <label className="field">
+                <span>Tipo</span>
+                <select
+                  value={section.type}
+                  onChange={(input) => {
+                    const type = input.target.value as EventSectionType;
+                    patchSection(section.id, {
+                      type,
+                      programItems: type === "intrattenimento" ? section.programItems || [] : undefined
+                    });
+                  }}
+                >
+                  <option value="campionato">Campionato</option>
+                  <option value="intrattenimento">Intrattenimento</option>
+                </select>
+              </label>
+              <Input label="Titolo" value={section.title} onChange={(title) => patchSection(section.id, { title, slug: section.slug || slugify(title) })} />
+              <Input label="Slug sezione" value={section.slug} onChange={(slug) => patchSection(section.id, { slug: slugify(slug) || slug })} />
+              <Input label="Luogo" value={section.location || ""} onChange={(location) => patchSection(section.id, { location })} />
+              <Input label="Inizio" type="datetime-local" value={toLocalInput(section.startsAt || event.startsAt)} onChange={(startsAt) => patchSection(section.id, { startsAt: toIso(startsAt) })} />
+              <Input label="Fine" type="datetime-local" value={toLocalInput(section.endsAt || event.endsAt)} onChange={(endsAt) => patchSection(section.id, { endsAt: toIso(endsAt) })} />
+              <Input label="Sottotitolo" value={section.subtitle || ""} onChange={(subtitle) => patchSection(section.id, { subtitle })} full />
+              <AssetInput label="Immagine hero / sfondo" value={section.heroImage || ""} onChange={(heroImage) => patchSection(section.id, { heroImage })} full />
+              <label className="field full">
+                <span>Descrizione</span>
+                <textarea value={section.description || ""} onChange={(input) => patchSection(section.id, { description: input.target.value })} />
+              </label>
+            </div>
+
+            {section.type === "intrattenimento" ? (
+              <div className="program-editor">
+                <div className="section-title-row">
+                  <div>
+                    <span className="small-label">Programma</span>
+                    <h3>Scaletta serata</h3>
+                  </div>
+                  <button className="ghost-button" type="button" onClick={() => addProgramItem(section)}><Plus size={17} /> Punto programma</button>
+                </div>
+                {(section.programItems || []).length === 0 ? <div className="empty">Aggiungi orari, titoli e dettagli della serata.</div> : null}
+                {(section.programItems || []).map((item) => (
+                  <div className="program-editor-row" key={item.id}>
+                    <Input label="Ora" value={item.time} onChange={(time) => patchProgramItem(section, item.id, { time })} />
+                    <Input label="Titolo" value={item.title} onChange={(title) => patchProgramItem(section, item.id, { title })} />
+                    <Input label="Luogo" value={item.location || ""} onChange={(location) => patchProgramItem(section, item.id, { location })} />
+                    <button className="icon-danger" type="button" onClick={() => removeProgramItem(section, item.id)} aria-label="Elimina punto programma"><Trash2 size={17} /></button>
+                    <label className="field full">
+                      <span>Descrizione</span>
+                      <textarea value={item.description || ""} onChange={(input) => patchProgramItem(section, item.id, { description: input.target.value })} />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -119,9 +267,12 @@ function DetailsEditor({ event, onChange }: EditorProps) {
 }
 
 function MatchesEditor({ event, onChange }: EditorProps) {
+  const campionatoSections = getCampionatoSections(event);
+
   function addMatch() {
     const match: Match = {
       id: crypto.randomUUID(),
+      sectionId: campionatoSections[0]?.id,
       category: event.categories[0] || "Categoria",
       homeTeam: "Squadra casa",
       awayTeam: "Squadra ospite",
@@ -158,6 +309,12 @@ function MatchesEditor({ event, onChange }: EditorProps) {
               <button className="icon-danger" type="button" onClick={() => removeMatch(match.id)} aria-label="Elimina partita"><Trash2 size={17} /></button>
             </div>
             <div className="form-grid compact">
+              <SectionSelect
+                label="Campionato"
+                value={match.sectionId || ""}
+                sections={campionatoSections}
+                onChange={(sectionId) => patchMatch(match.id, { sectionId })}
+              />
               <Input label="Categoria" value={match.category} onChange={(category) => patchMatch(match.id, { category })} />
               <Input label="Campo" value={match.court} onChange={(court) => patchMatch(match.id, { court })} />
               <Input label="Squadra casa" value={match.homeTeam} onChange={(homeTeam) => patchMatch(match.id, { homeTeam })} />
@@ -184,12 +341,14 @@ function MatchesEditor({ event, onChange }: EditorProps) {
 }
 
 function RankingsEditor({ event, onChange }: EditorProps) {
+  const campionatoSections = getCampionatoSections(event);
+  const [selectedSectionId, setSelectedSectionId] = useState(campionatoSections[0]?.id || "");
   const columns = getRankingColumns(event);
 
   function importTable(raw: string) {
     const parsed = parseRankingPaste(raw);
     if (!parsed) return;
-    onChange({ ...event, rankingColumns: parsed.columns, rankings: parsed.rows });
+    onChange({ ...event, rankingColumns: parsed.columns, rankings: parsed.rows.map((row) => ({ ...row, sectionId: selectedSectionId || undefined })) });
   }
 
   function clearTable() {
@@ -201,6 +360,13 @@ function RankingsEditor({ event, onChange }: EditorProps) {
       <PanelHeader title="Classifiche" text="Incolla direttamente da Excel o Google Sheets: prima riga intestazioni, righe successive squadre e valori." />
       <div className="stack">
         <div className="paste-panel">
+          <SectionSelect
+            label="Classifica relativa a"
+            value={selectedSectionId}
+            sections={campionatoSections}
+            onChange={(sectionId) => setSelectedSectionId(sectionId || "")}
+            full
+          />
           <label className="field full">
             <span>Incolla tabella classifica</span>
             <textarea
@@ -230,6 +396,8 @@ function RankingsEditor({ event, onChange }: EditorProps) {
 }
 
 function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Comment[] }) {
+  const campionatoSections = getCampionatoSections(event);
+
   function patchMedia(id: string, patch: Partial<MediaItem>) {
     onChange({ ...event, media: event.media.map((item) => (item.id === id ? { ...item, ...patch } : item)) });
   }
@@ -255,6 +423,7 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
     const now = new Date().toISOString();
     const newMedia = result.files.map((file) => ({
       id: crypto.randomUUID(),
+      sectionId: campionatoSections[0]?.id,
       type: file.type,
       title: file.name.replace(/\.[^.]+$/, ""),
       url: file.url,
@@ -295,6 +464,13 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
               <button className="icon-danger" type="button" onClick={() => removeMedia(item.id)} aria-label="Elimina media"><Trash2 size={17} /></button>
             </div>
             <div className="form-grid compact media-simple-form">
+              <SectionSelect
+                label="Campionato"
+                value={item.sectionId || ""}
+                sections={campionatoSections}
+                onChange={(sectionId) => patchMedia(item.id, { sectionId })}
+                full
+              />
               <Input label="Didascalia" value={item.caption || ""} onChange={(caption) => patchMedia(item.id, { caption })} full />
               <label className="toggle-field full">
                 <input type="checkbox" checked={item.commentsEnabled} onChange={(input) => patchMedia(item.id, { commentsEnabled: input.target.checked })} />
@@ -441,10 +617,13 @@ function getRankingCell(row: RankingRow, column: string) {
 }
 
 function FeedEditor({ event, onChange }: EditorProps) {
+  const campionatoSections = getCampionatoSections(event);
+
   function addPost() {
     const post: FeedPost = {
       id: crypto.randomUUID(),
       eventId: event.slug,
+      sectionId: campionatoSections[0]?.id,
       title: "Aggiornamento live",
       body: "Nuovo aggiornamento dalla manifestazione.",
       type: "announcement",
@@ -473,6 +652,12 @@ function FeedEditor({ event, onChange }: EditorProps) {
               <button className="icon-danger" type="button" onClick={() => removePost(post.id)} aria-label="Elimina post"><Trash2 size={17} /></button>
             </div>
             <div className="form-grid compact">
+              <SectionSelect
+                label="Campionato"
+                value={post.sectionId || ""}
+                sections={campionatoSections}
+                onChange={(sectionId) => patchPost(post.id, { sectionId })}
+              />
               <Input label="Titolo" value={post.title} onChange={(title) => patchPost(post.id, { title })} />
               <label className="field">
                 <span>Tipo</span>
@@ -517,6 +702,32 @@ function Input({ label, value, onChange, type = "text", full = false }: { label:
     <label className={`field ${full ? "full" : ""}`}>
       <span>{label}</span>
       <input type={type} value={value} onChange={(input) => onChange(input.target.value)} />
+    </label>
+  );
+}
+
+function SectionSelect({
+  label,
+  value,
+  sections,
+  onChange,
+  full = false
+}: {
+  label: string;
+  value: string;
+  sections: EventSection[];
+  onChange: (value: string | undefined) => void;
+  full?: boolean;
+}) {
+  return (
+    <label className={`field ${full ? "full" : ""}`}>
+      <span>{label}</span>
+      <select value={value} onChange={(input) => onChange(input.target.value || undefined)}>
+        <option value="">Primo campionato / generale</option>
+        {sections.map((section) => (
+          <option value={section.id} key={section.id}>{section.title}</option>
+        ))}
+      </select>
     </label>
   );
 }
@@ -586,6 +797,42 @@ function AssetInput({ label, value, onChange, full = false }: { label: string; v
       </div>
     </div>
   );
+}
+
+function normalizeEventSections(event: EventRecord): EventRecord {
+  return { ...event, sections: getEditableSections(event) };
+}
+
+function getEditableSections(event: EventRecord): EventSection[] {
+  if (event.sections?.length) return event.sections;
+
+  return [
+    {
+      id: crypto.randomUUID(),
+      slug: "campionato",
+      type: "campionato",
+      title: "Campionato",
+      subtitle: "Partite, risultati e classifiche",
+      description: "Sezione sportiva con calendario, classifiche e aggiornamenti live.",
+      startsAt: event.startsAt,
+      endsAt: event.endsAt,
+      location: event.location,
+      heroImage: event.coverImage
+    }
+  ];
+}
+
+function getCampionatoSections(event: EventRecord) {
+  return getEditableSections(event).filter((section) => section.type === "campionato");
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function splitList(value: string) {

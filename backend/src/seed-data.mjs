@@ -14,6 +14,38 @@ export const seedEvents = [
     coverImage: "/assets/finali-nazionali-u14-u16.jpeg",
     logoImage: "/assets/dbc-2026-logo-white-outline.png",
     streamUrl: "https://www.youtube.com/embed/live_stream?channel=CHANNEL_ID",
+    sections: [
+      {
+        id: "section-campionato",
+        slug: "campionato",
+        type: "campionato",
+        title: "Campionato Don Bosco Cup",
+        subtitle: "Partite, risultati e classifiche ufficiali",
+        description: "Calendario gare, punteggi live, classifiche importate dalla segreteria e feed operativo.",
+        startsAt: "2026-05-28T09:00:00.000Z",
+        endsAt: "2026-05-31T18:00:00.000Z",
+        location: "Palazzetti e campi gara di Cesenatico",
+        heroImage: "/assets/finali-nazionali-u14-u16.jpeg"
+      },
+      {
+        id: "section-serata-inaugurale",
+        slug: "serata-inaugurale",
+        type: "intrattenimento",
+        title: "Serata inaugurale",
+        subtitle: "Apertura ufficiale della manifestazione",
+        description: "Un momento pubblico per accogliere squadre, famiglie e staff con presentazioni, saluti e animazione.",
+        startsAt: "2026-05-28T18:30:00.000Z",
+        endsAt: "2026-05-28T22:30:00.000Z",
+        location: "Piazza centrale evento",
+        heroImage: "/assets/finali-nazionali-u14-u16.jpeg",
+        programItems: [
+          { id: "program-1", time: "18:30", title: "Accoglienza squadre", description: "Arrivo delegazioni e apertura area evento.", location: "Ingresso principale" },
+          { id: "program-2", time: "19:15", title: "Presentazione ufficiale", description: "Sfilata delle squadre e saluto degli organizzatori.", location: "Palco centrale" },
+          { id: "program-3", time: "20:15", title: "Apertura Don Bosco Cup", description: "Avvio ufficiale delle finali nazionali.", location: "Palco centrale" },
+          { id: "program-4", time: "21:00", title: "Musica e animazione", description: "Intrattenimento per atleti, famiglie e pubblico.", location: "Area festa" }
+        ]
+      }
+    ],
     categories: ["Under 14", "Under 16"],
     teams: [
       { id: "team-u14-1", name: "PGS Aurora", category: "Under 14", city: "Bologna" },

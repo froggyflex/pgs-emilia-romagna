@@ -16,6 +16,20 @@ export function createDraftEvent(): EventRecord {
     startsAt: now,
     endsAt: now,
     streamUrl: "",
+    sections: [
+      {
+        id: crypto.randomUUID(),
+        slug: "campionato",
+        type: "campionato",
+        title: "Campionato",
+        subtitle: "Partite, risultati e classifiche",
+        description: "Sezione sportiva con calendario, classifiche e aggiornamenti live.",
+        startsAt: now,
+        endsAt: now,
+        location: "Luogo evento",
+        heroImage: "/assets/finali-nazionali-u14-u16.jpeg"
+      }
+    ],
     categories: ["Under 14", "Under 16"],
     teams: [],
     matches: [],

@@ -14,6 +14,7 @@ export const eventSchema = z.object({
   logoImage: z.string().min(1),
   streamUrl: z.string().optional().or(z.literal("")),
   qrUrl: z.string().optional(),
+  sections: z.array(z.any()).optional(),
   categories: z.array(z.string()),
   teams: z.array(z.any()),
   matches: z.array(z.any()),

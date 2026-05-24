@@ -1,0 +1,53 @@
+import { notFound } from "next/navigation";
+import { SiteHeader } from "@/components/SiteHeader";
+import { EventSectionPublicView, getEventSections } from "@/components/EventPublicView";
+import { getEventBySlug, listComments } from "@/lib/backend-api";
+import { safeAuth } from "@/auth";
+import { isAuthBypassed } from "@/lib/auth-flags";
+
+export const dynamic = "force-dynamic";
+
+export default async function EventSectionPage({ params }: { params: Promise<{ slug: string; sectionSlug: string }> }) {
+  const { slug, sectionSlug } = await params;
+  const event = await getEventBySlug(slug);
+
+  if (!event) {
+    notFound();
+  }
+
+  const section = getEventSections(event).find((item) => item.slug === sectionSlug);
+
+  if (!section) {
+    notFound();
+  }
+
+  const allComments = await listComments(event.slug);
+  const comments = allComments.filter((comment) => (
+    comment.targetType === "event" &&
+    (comment.targetId === section.id || (section.type === "campionato" && comment.targetId === event.slug))
+  ));
+  const sectionMedia = event.media.filter((item) => !item.sectionId || item.sectionId === section.id);
+  const mediaComments = Object.fromEntries(
+    sectionMedia.map((item) => [
+      item.id,
+      allComments.filter((comment) => comment.targetType === "media" && comment.targetId === item.id)
+    ])
+  );
+  const session = isAuthBypassed() ? null : await safeAuth();
+  const viewerAuthenticated = isAuthBypassed() || Boolean(session?.user?.email);
+
+  return (
+    <main className="shell">
+      <SiteHeader />
+      <div className="page">
+        <EventSectionPublicView
+          event={event}
+          section={section}
+          comments={comments}
+          mediaComments={mediaComments}
+          viewerAuthenticated={viewerAuthenticated}
+        />
+      </div>
+    </main>
+  );
+}

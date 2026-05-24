@@ -45,6 +45,7 @@ async function ensureCollections(db) {
             slug: { bsonType: "string" },
             title: { bsonType: "string" },
             status: { enum: ["draft", "published", "archived"] },
+            sections: { bsonType: ["array", "null"] },
             matches: { bsonType: "array" },
             rankingColumns: { bsonType: ["array", "null"] },
             rankings: { bsonType: "array" },
