@@ -98,11 +98,12 @@ export async function deleteEvent(id) {
   const db = await getDb();
 
   if (!db) {
-    memoryStore.__PGS_EVENTS__ = getMemoryEvents().filter((event) => event._id !== id);
+    memoryStore.__PGS_EVENTS__ = getMemoryEvents().filter((event) => event._id !== id && event.slug !== id);
     return;
   }
 
-  await db.collection(EVENTS).deleteOne({ _id: new ObjectId(id) });
+  const query = ObjectId.isValid(id) ? { _id: new ObjectId(id) } : { slug: id };
+  await db.collection(EVENTS).deleteOne(query);
 }
 
 export async function incrementMediaLike(eventSlug, mediaId) {
