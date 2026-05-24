@@ -3,6 +3,7 @@ import { MongoClient } from "mongodb";
 let client;
 let clientPromise;
 let connectionWarningShown = false;
+const DATABASE_TIMEOUT_MS = 6500;
 
 export function getClientPromise() {
   if (!process.env.MONGODB_URI) {
@@ -34,11 +35,30 @@ export async function getDb() {
     return undefined;
   }
 
-  const connected = await promise;
+  const connected = await withDatabaseTimeout(promise);
 
   if (!connected) {
     return undefined;
   }
 
   return connected.db(process.env.MONGODB_DB || "pgs-eventi-live");
+}
+
+async function withDatabaseTimeout(promise) {
+  let timeout;
+
+  const timeoutPromise = new Promise((resolve) => {
+    timeout = setTimeout(() => {
+      if (!connectionWarningShown) {
+        console.warn("MongoDB connection timed out, using local seed data.");
+        connectionWarningShown = true;
+      }
+
+      resolve(undefined);
+    }, DATABASE_TIMEOUT_MS);
+  });
+
+  const connected = await Promise.race([promise, timeoutPromise]);
+  clearTimeout(timeout);
+  return connected;
 }

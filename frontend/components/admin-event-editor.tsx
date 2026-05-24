@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   ArrowLeft,
   CalendarPlus,
+  ChevronLeft,
+  ChevronRight,
   Eye,
   ImagePlus,
   PartyPopper,
@@ -20,6 +22,7 @@ type Tab = "details" | "sections" | "matches" | "rankings" | "media" | "feed";
 
 const statusLabels: Record<EventStatus, string> = {
   draft: "Bozza",
+  updating: "In lavorazione",
   published: "Pubblicato",
   archived: "Archiviato"
 };
@@ -93,12 +96,35 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
 
 function SectionsEditor({ event, onChange }: EditorProps) {
   const sections = getEditableSections(event);
+  const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id || "");
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const shouldScrollRef = useRef(false);
+  const activeIndex = Math.max(0, sections.findIndex((section) => section.id === activeSectionId));
+  const activeSection = sections[activeIndex];
+
+  useEffect(() => {
+    if (sections.length === 0) {
+      setActiveSectionId("");
+      return;
+    }
+
+    if (!sections.some((section) => section.id === activeSectionId)) {
+      setActiveSectionId(sections[0].id);
+    }
+  }, [activeSectionId, sections]);
+
+  useEffect(() => {
+    if (!shouldScrollRef.current) return;
+    shouldScrollRef.current = false;
+    editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [activeSectionId]);
 
   function addSection(type: EventSectionType) {
-    const title = type === "campionato" ? "Nuovo campionato" : "Nuovo intrattenimento";
+    const sameTypeCount = sections.filter((section) => section.type === type).length;
+    const title = type === "campionato" ? `Nuovo campionato ${sameTypeCount + 1}` : `Nuovo intrattenimento ${sameTypeCount + 1}`;
     const section: EventSection = {
       id: crypto.randomUUID(),
-      slug: slugify(title),
+      slug: getUniqueSectionSlug(slugify(title), sections),
       type,
       title,
       subtitle: type === "campionato" ? "Partite, risultati e classifiche" : "Programma e informazioni per il pubblico",
@@ -110,6 +136,8 @@ function SectionsEditor({ event, onChange }: EditorProps) {
       programItems: type === "intrattenimento" ? [] : undefined
     };
 
+    shouldScrollRef.current = true;
+    setActiveSectionId(section.id);
     onChange({ ...event, sections: [...sections, section] });
   }
 
@@ -121,7 +149,22 @@ function SectionsEditor({ event, onChange }: EditorProps) {
   }
 
   function removeSection(id: string) {
-    onChange({ ...event, sections: sections.filter((section) => section.id !== id) });
+    const nextSections = sections.filter((section) => section.id !== id);
+    const removedIndex = sections.findIndex((section) => section.id === id);
+    const nextActive = nextSections[Math.min(removedIndex, nextSections.length - 1)]?.id || "";
+
+    setActiveSectionId(nextActive);
+    onChange({ ...event, sections: nextSections });
+  }
+
+  function showPreviousSection() {
+    if (sections.length === 0) return;
+    setActiveSectionId(sections[(activeIndex - 1 + sections.length) % sections.length].id);
+  }
+
+  function showNextSection() {
+    if (sections.length === 0) return;
+    setActiveSectionId(sections[(activeIndex + 1) % sections.length].id);
   }
 
   function addProgramItem(section: EventSection) {
@@ -159,30 +202,66 @@ function SectionsEditor({ event, onChange }: EditorProps) {
       />
       <div className="stack">
         {sections.length === 0 ? <div className="empty">Nessun evento interno configurato.</div> : null}
-        {sections.map((section) => (
-          <div className={`editor-item section-editor-card section-editor-${section.type}`} key={section.id}>
+        {activeSection ? (
+          <>
+            <div className="section-gallery" ref={editorRef}>
+              <div className="section-gallery-header">
+                <div>
+                  <span className="small-label">Mappa eventi interni</span>
+                  <h3>{activeIndex + 1} di {sections.length}: {activeSection.title || "Evento interno"}</h3>
+                </div>
+                <div className="section-gallery-controls">
+                  <button className="icon-button" type="button" onClick={showPreviousSection} disabled={sections.length < 2} aria-label="Evento precedente">
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button className="icon-button" type="button" onClick={showNextSection} disabled={sections.length < 2} aria-label="Evento successivo">
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+              <div className="section-gallery-track" role="list" aria-label="Eventi interni">
+                {sections.map((section, index) => (
+                  <button
+                    className={`section-gallery-card ${section.id === activeSection.id ? "active" : ""}`}
+                    type="button"
+                    onClick={() => setActiveSectionId(section.id)}
+                    key={section.id}
+                  >
+                    <span className="section-gallery-index">{index + 1}</span>
+                    <span className="status">
+                      {section.type === "campionato" ? <Trophy size={14} /> : <PartyPopper size={14} />}
+                      {section.type === "campionato" ? "Campionato" : "Intrattenimento"}
+                    </span>
+                    <strong>{section.title || "Evento interno"}</strong>
+                    <small>{section.location || event.location}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className={`editor-item section-editor-card section-editor-${activeSection.type}`}>
             <div className="item-toolbar">
               <div>
                 <span className="status">
-                  {section.type === "campionato" ? <Trophy size={14} /> : <PartyPopper size={14} />}
-                  {section.type === "campionato" ? "Campionato" : "Intrattenimento"}
+                  {activeSection.type === "campionato" ? <Trophy size={14} /> : <PartyPopper size={14} />}
+                  {activeSection.type === "campionato" ? "Campionato" : "Intrattenimento"}
                 </span>
-                <strong>{section.title}</strong>
-                <p className="muted">{section.subtitle || "Sezione della manifestazione"}</p>
+                <strong>{activeSection.title}</strong>
+                <p className="muted">{activeSection.subtitle || "Sezione della manifestazione"}</p>
               </div>
-              <button className="icon-danger" type="button" onClick={() => removeSection(section.id)} aria-label="Elimina evento interno"><Trash2 size={17} /></button>
+              <button className="icon-danger" type="button" onClick={() => removeSection(activeSection.id)} aria-label="Elimina evento interno"><Trash2 size={17} /></button>
             </div>
 
             <div className="form-grid compact">
               <label className="field">
                 <span>Tipo</span>
                 <select
-                  value={section.type}
+                  value={activeSection.type}
                   onChange={(input) => {
                     const type = input.target.value as EventSectionType;
-                    patchSection(section.id, {
+                    patchSection(activeSection.id, {
                       type,
-                      programItems: type === "intrattenimento" ? section.programItems || [] : undefined
+                      programItems: type === "intrattenimento" ? activeSection.programItems || [] : undefined
                     });
                   }}
                 >
@@ -190,45 +269,46 @@ function SectionsEditor({ event, onChange }: EditorProps) {
                   <option value="intrattenimento">Intrattenimento</option>
                 </select>
               </label>
-              <Input label="Titolo" value={section.title} onChange={(title) => patchSection(section.id, { title, slug: section.slug || slugify(title) })} />
-              <Input label="Slug sezione" value={section.slug} onChange={(slug) => patchSection(section.id, { slug: slugify(slug) || slug })} />
-              <Input label="Luogo" value={section.location || ""} onChange={(location) => patchSection(section.id, { location })} />
-              <Input label="Inizio" type="datetime-local" value={toLocalInput(section.startsAt || event.startsAt)} onChange={(startsAt) => patchSection(section.id, { startsAt: toIso(startsAt) })} />
-              <Input label="Fine" type="datetime-local" value={toLocalInput(section.endsAt || event.endsAt)} onChange={(endsAt) => patchSection(section.id, { endsAt: toIso(endsAt) })} />
-              <Input label="Sottotitolo" value={section.subtitle || ""} onChange={(subtitle) => patchSection(section.id, { subtitle })} full />
-              <AssetInput label="Immagine hero / sfondo" value={section.heroImage || ""} onChange={(heroImage) => patchSection(section.id, { heroImage })} full />
+              <Input label="Titolo" value={activeSection.title} onChange={(title) => patchSection(activeSection.id, { title, slug: activeSection.slug || slugify(title) })} />
+              <Input label="Slug sezione" value={activeSection.slug} onChange={(slug) => patchSection(activeSection.id, { slug: slugify(slug) || slug })} />
+              <Input label="Luogo" value={activeSection.location || ""} onChange={(location) => patchSection(activeSection.id, { location })} />
+              <Input label="Inizio" type="datetime-local" value={toLocalInput(activeSection.startsAt || event.startsAt)} onChange={(startsAt) => patchSection(activeSection.id, { startsAt: toIso(startsAt) })} />
+              <Input label="Fine" type="datetime-local" value={toLocalInput(activeSection.endsAt || event.endsAt)} onChange={(endsAt) => patchSection(activeSection.id, { endsAt: toIso(endsAt) })} />
+              <Input label="Sottotitolo" value={activeSection.subtitle || ""} onChange={(subtitle) => patchSection(activeSection.id, { subtitle })} full />
+              <AssetInput label="Immagine hero / sfondo" value={activeSection.heroImage || ""} onChange={(heroImage) => patchSection(activeSection.id, { heroImage })} full />
               <label className="field full">
                 <span>Descrizione</span>
-                <textarea value={section.description || ""} onChange={(input) => patchSection(section.id, { description: input.target.value })} />
+                <textarea value={activeSection.description || ""} onChange={(input) => patchSection(activeSection.id, { description: input.target.value })} />
               </label>
             </div>
 
-            {section.type === "intrattenimento" ? (
+            {activeSection.type === "intrattenimento" ? (
               <div className="program-editor">
                 <div className="section-title-row">
                   <div>
                     <span className="small-label">Programma</span>
                     <h3>Scaletta serata</h3>
                   </div>
-                  <button className="ghost-button" type="button" onClick={() => addProgramItem(section)}><Plus size={17} /> Punto programma</button>
+                  <button className="ghost-button" type="button" onClick={() => addProgramItem(activeSection)}><Plus size={17} /> Punto programma</button>
                 </div>
-                {(section.programItems || []).length === 0 ? <div className="empty">Aggiungi orari, titoli e dettagli della serata.</div> : null}
-                {(section.programItems || []).map((item) => (
+                {(activeSection.programItems || []).length === 0 ? <div className="empty">Aggiungi orari, titoli e dettagli della serata.</div> : null}
+                {(activeSection.programItems || []).map((item) => (
                   <div className="program-editor-row" key={item.id}>
-                    <Input label="Ora" value={item.time} onChange={(time) => patchProgramItem(section, item.id, { time })} />
-                    <Input label="Titolo" value={item.title} onChange={(title) => patchProgramItem(section, item.id, { title })} />
-                    <Input label="Luogo" value={item.location || ""} onChange={(location) => patchProgramItem(section, item.id, { location })} />
-                    <button className="icon-danger" type="button" onClick={() => removeProgramItem(section, item.id)} aria-label="Elimina punto programma"><Trash2 size={17} /></button>
+                    <Input label="Ora" value={item.time} onChange={(time) => patchProgramItem(activeSection, item.id, { time })} />
+                    <Input label="Titolo" value={item.title} onChange={(title) => patchProgramItem(activeSection, item.id, { title })} />
+                    <Input label="Luogo" value={item.location || ""} onChange={(location) => patchProgramItem(activeSection, item.id, { location })} />
+                    <button className="icon-danger" type="button" onClick={() => removeProgramItem(activeSection, item.id)} aria-label="Elimina punto programma"><Trash2 size={17} /></button>
                     <label className="field full">
                       <span>Descrizione</span>
-                      <textarea value={item.description || ""} onChange={(input) => patchProgramItem(section, item.id, { description: input.target.value })} />
+                      <textarea value={item.description || ""} onChange={(input) => patchProgramItem(activeSection, item.id, { description: input.target.value })} />
                     </label>
                   </div>
                 ))}
               </div>
             ) : null}
           </div>
-        ))}
+          </>
+        ) : null}
       </div>
     </div>
   );
@@ -247,6 +327,7 @@ function DetailsEditor({ event, onChange }: EditorProps) {
           <span>Stato</span>
           <select value={event.status} onChange={(input) => onChange({ ...event, status: input.target.value as EventStatus })}>
             <option value="draft">Bozza</option>
+            <option value="updating">In lavorazione</option>
             <option value="published">Pubblicato</option>
             <option value="archived">Archiviato</option>
           </select>
@@ -804,7 +885,7 @@ function normalizeEventSections(event: EventRecord): EventRecord {
 }
 
 function getEditableSections(event: EventRecord): EventSection[] {
-  if (event.sections?.length) return event.sections;
+  if (Array.isArray(event.sections)) return event.sections;
 
   return [
     {
@@ -833,6 +914,18 @@ function slugify(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function getUniqueSectionSlug(baseSlug: string, sections: EventSection[]) {
+  const fallbackSlug = baseSlug || "evento";
+  const usedSlugs = new Set(sections.map((section) => section.slug));
+  if (!usedSlugs.has(fallbackSlug)) return fallbackSlug;
+
+  let index = 2;
+  while (usedSlugs.has(`${fallbackSlug}-${index}`)) {
+    index += 1;
+  }
+  return `${fallbackSlug}-${index}`;
 }
 
 function splitList(value: string) {

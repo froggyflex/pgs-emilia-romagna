@@ -14,6 +14,23 @@ if (!uri) {
 }
 
 const client = new MongoClient(uri);
+const eventValidator = {
+  $jsonSchema: {
+    bsonType: "object",
+    required: ["slug", "title", "status", "startsAt", "endsAt", "location", "media", "matches", "rankings", "feed"],
+    properties: {
+      slug: { bsonType: "string" },
+      title: { bsonType: "string" },
+      status: { enum: ["draft", "updating", "published", "archived"] },
+      sections: { bsonType: ["array", "null"] },
+      matches: { bsonType: "array" },
+      rankingColumns: { bsonType: ["array", "null"] },
+      rankings: { bsonType: "array" },
+      media: { bsonType: "array" },
+      feed: { bsonType: "array" }
+    }
+  }
+};
 
 try {
   await client.connect();
@@ -37,23 +54,13 @@ async function ensureCollections(db) {
 
   if (!names.has("events")) {
     await db.createCollection("events", {
-      validator: {
-        $jsonSchema: {
-          bsonType: "object",
-          required: ["slug", "title", "status", "startsAt", "endsAt", "location", "media", "matches", "rankings", "feed"],
-          properties: {
-            slug: { bsonType: "string" },
-            title: { bsonType: "string" },
-            status: { enum: ["draft", "published", "archived"] },
-            sections: { bsonType: ["array", "null"] },
-            matches: { bsonType: "array" },
-            rankingColumns: { bsonType: ["array", "null"] },
-            rankings: { bsonType: "array" },
-            media: { bsonType: "array" },
-            feed: { bsonType: "array" }
-          }
-        }
-      },
+      validator: eventValidator,
+      validationLevel: "moderate"
+    });
+  } else {
+    await db.command({
+      collMod: "events",
+      validator: eventValidator,
       validationLevel: "moderate"
     });
   }

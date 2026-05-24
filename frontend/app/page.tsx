@@ -67,15 +67,16 @@ export default async function Home() {
             ) : null}
             {events.map((event) => {
               const isLive = event.matches.some((match) => match.status === "live");
+              const isUpdating = event.status === "updating";
 
               return (
-                <Link className="event-list-row" href={`/events/${event.slug}`} key={event.slug}>
+                <Link className={`event-list-row ${isUpdating ? "event-list-row-updating" : ""}`} href={`/events/${event.slug}`} key={event.slug}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={event.coverImage} alt={event.title} />
                   <div className="event-list-main">
                     <div className="event-row-title">
                       <h3>{event.title}</h3>
-                      {isLive ? <span className="status live">Live</span> : <span className="status">Online</span>}
+                      {isUpdating ? <span className="status status-updating">In lavorazione</span> : isLive ? <span className="status live">Live</span> : <span className="status">Online</span>}
                     </div>
                     <p>{event.subtitle}</p>
                     <div className="event-row-stats">
@@ -86,9 +87,9 @@ export default async function Home() {
                     </div>
                   </div>
                   <div className="event-list-side">
-                    <span className="small-label">Ultimo aggiornamento</span>
-                    <strong>{latestFeed(event)}</strong>
-                    <span className="button">Apri evento</span>
+                    <span className="small-label">{isUpdating ? "Stato evento" : "Ultimo aggiornamento"}</span>
+                    <strong>{isUpdating ? "Pagina in aggiornamento" : latestFeed(event)}</strong>
+                    <span className={isUpdating ? "ghost-button" : "button"}>{isUpdating ? "Vedi stato" : "Apri evento"}</span>
                   </div>
                 </Link>
               );

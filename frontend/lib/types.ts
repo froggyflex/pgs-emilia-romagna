@@ -1,6 +1,6 @@
 export type MatchStatus = "scheduled" | "live" | "finished" | "postponed";
 
-export type EventStatus = "draft" | "published" | "archived";
+export type EventStatus = "draft" | "updating" | "published" | "archived";
 
 export type EventSectionType = "campionato" | "intrattenimento";
 

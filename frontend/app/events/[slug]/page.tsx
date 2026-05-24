@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
-import { EventPublicView } from "@/components/EventPublicView";
+import { EventPublicView, EventUnavailableView } from "@/components/EventPublicView";
 import { getEventBySlug } from "@/lib/backend-api";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
     <main className="shell">
       <SiteHeader />
       <div className="page">
-        <EventPublicView event={event} />
+        {event.status === "updating" ? <EventUnavailableView event={event} /> : <EventPublicView event={event} />}
       </div>
     </main>
   );

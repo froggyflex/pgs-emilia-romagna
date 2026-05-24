@@ -10,11 +10,12 @@ import type { EventRecord, EventStatus } from "@/lib/types";
 
 const statusLabels: Record<EventStatus, string> = {
   draft: "Bozza",
+  updating: "In lavorazione",
   published: "Pubblicato",
   archived: "Archiviato"
 };
 
-const statusOptions: EventStatus[] = ["draft", "published", "archived"];
+const statusOptions: EventStatus[] = ["draft", "updating", "published", "archived"];
 
 export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[] }) {
   const router = useRouter();
@@ -39,6 +40,7 @@ export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[
     total: events.length,
     live: events.filter((event) => event.matches.some((match) => match.status === "live")).length,
     published: events.filter((event) => event.status === "published").length,
+    updating: events.filter((event) => event.status === "updating").length,
     drafts: events.filter((event) => event.status === "draft").length
   }), [events]);
 
@@ -87,6 +89,7 @@ export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[
       <section className="admin-metrics">
         <Metric label="Eventi" value={metrics.total} />
         <Metric label="Pubblicati" value={metrics.published} />
+        <Metric label="In lavorazione" value={metrics.updating} />
         <Metric label="Bozze" value={metrics.drafts} />
         <Metric label="Live ora" value={metrics.live} />
       </section>
@@ -105,6 +108,7 @@ export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | EventStatus)}>
               <option value="all">Tutti gli stati</option>
               <option value="draft">Bozze</option>
+              <option value="updating">In lavorazione</option>
               <option value="published">Pubblicati</option>
               <option value="archived">Archiviati</option>
             </select>

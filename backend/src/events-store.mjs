@@ -5,8 +5,8 @@ import { seedComments, seedEvents } from "./seed-data.mjs";
 
 const EVENTS = "events";
 const COMMENTS = "comments";
+const PUBLIC_EVENT_STATUSES = ["published", "updating"];
 const memoryStore = globalThis;
-const seedEvent = seedEvents[0];
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -33,15 +33,11 @@ export async function listEvents(includeDrafts = false) {
 
   if (!db) {
     const events = getMemoryEvents();
-    return includeDrafts ? events : events.filter((event) => event.status === "published");
+    return includeDrafts ? events : events.filter((event) => PUBLIC_EVENT_STATUSES.includes(event.status));
   }
 
-  const query = includeDrafts ? {} : { status: "published" };
+  const query = includeDrafts ? {} : { status: { $in: PUBLIC_EVENT_STATUSES } };
   const events = await db.collection(EVENTS).find(query).sort({ startsAt: 1 }).toArray();
-
-  if (events.length === 0 && !includeDrafts) {
-    return [clone(seedEvent)];
-  }
 
   return events.map(serializeEvent);
 }
@@ -50,10 +46,10 @@ export async function getEventBySlug(slug, includeDrafts = false) {
   const db = await getDb();
 
   if (!db) {
-    return getMemoryEvents().find((event) => event.slug === slug && (includeDrafts || event.status === "published")) || null;
+    return getMemoryEvents().find((event) => event.slug === slug && (includeDrafts || PUBLIC_EVENT_STATUSES.includes(event.status))) || null;
   }
 
-  const query = includeDrafts ? { slug } : { slug, status: "published" };
+  const query = includeDrafts ? { slug } : { slug, status: { $in: PUBLIC_EVENT_STATUSES } };
   const event = await db.collection(EVENTS).findOne(query);
   return event ? serializeEvent(event) : null;
 }

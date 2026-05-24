@@ -6,7 +6,7 @@ export const eventSchema = z.object({
   title: z.string().min(2),
   subtitle: z.string().min(2),
   description: z.string().min(2),
-  status: z.enum(["draft", "published", "archived"]),
+  status: z.enum(["draft", "updating", "published", "archived"]),
   startsAt: z.string(),
   endsAt: z.string(),
   location: z.string().min(2),

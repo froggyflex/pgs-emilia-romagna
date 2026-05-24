@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
-import { EventSectionPublicView, getEventSections } from "@/components/EventPublicView";
+import { EventSectionPublicView, EventUnavailableView, getEventSections } from "@/components/EventPublicView";
 import { getEventBySlug, listComments } from "@/lib/backend-api";
 import { safeAuth } from "@/auth";
 import { isAuthBypassed } from "@/lib/auth-flags";
@@ -13,6 +13,17 @@ export default async function EventSectionPage({ params }: { params: Promise<{ s
 
   if (!event) {
     notFound();
+  }
+
+  if (event.status === "updating") {
+    return (
+      <main className="shell">
+        <SiteHeader />
+        <div className="page">
+          <EventUnavailableView event={event} />
+        </div>
+      </main>
+    );
   }
 
   const section = getEventSections(event).find((item) => item.slug === sectionSlug);

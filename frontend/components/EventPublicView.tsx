@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import QRCode from "qrcode";
-import { ArrowLeft, CalendarDays, MapPin, MessageCircle, PartyPopper, Radio, Trophy, Video } from "lucide-react";
+import { ArrowLeft, CalendarDays, MapPin, MessageCircle, PartyPopper, Radio, RefreshCw, Trophy, Video } from "lucide-react";
 import type { Comment, EventRecord, EventSection, MatchStatus, RankingRow } from "@/lib/types";
 import { CommentBox } from "./comment-box";
 import { MainEventSoundtrack } from "./main-event-soundtrack";
 import { MediaCard } from "./media-card";
 import { MediaContributionForm } from "./media-contribution-form";
+import { ShareCodeControls } from "./share-code-controls";
 
 const statusLabels: Record<MatchStatus, string> = {
   scheduled: "In programma",
@@ -15,8 +16,22 @@ const statusLabels: Record<MatchStatus, string> = {
   postponed: "Rinviata"
 };
 
+export function EventUnavailableView({ event }: { event: EventRecord }) {
+  return (
+    <section className="event-status-page">
+      <div className="event-status-card">
+        <span className="kicker"><RefreshCw size={16} /> In lavorazione</span>
+        <h1>{event.title}</h1>
+        <p className="lead">La pagina evento e in aggiornamento.</p>
+        <p className="muted">Gli organizzatori stanno preparando o aggiornando i contenuti. Torna piu tardi per vedere calendario, classifiche, media e feed live.</p>
+        <Link className="button" href="/">Torna agli eventi</Link>
+      </div>
+    </section>
+  );
+}
+
 export function getEventSections(event: EventRecord): EventSection[] {
-  if (event.sections?.length) return event.sections;
+  if (Array.isArray(event.sections)) return event.sections;
 
   return [
     {
@@ -85,6 +100,7 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
           </div>
         </div>
         <div className="internal-event-grid">
+          {sections.length === 0 ? <div className="empty">Nessun evento interno configurato.</div> : null}
           {sections.map((section) => (
             <Link className={`internal-event-card internal-event-card-${section.type}`} href={`/events/${event.slug}/${section.slug}`} key={section.id}>
               <span className="section-type-badge">
@@ -110,6 +126,7 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
           <p className="muted">Porta il pubblico alla pagina principale, da cui potra scegliere il singolo evento da seguire.</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrDataUrl} width={220} height={220} alt="QR code manifestazione" />
+          <ShareCodeControls url={eventUrl} qrDataUrl={qrDataUrl} fileName={`${event.slug}-qr.png`} />
         </div>
       </section>
     </>
@@ -241,6 +258,7 @@ async function ChampionshipEventView({
             <p className="muted">Da stampare o mostrare all'ingresso per aprire direttamente questo campionato.</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={qrDataUrl} width={220} height={220} alt="QR code evento" />
+            <ShareCodeControls url={sectionUrl} qrDataUrl={qrDataUrl} fileName={`${event.slug}-${section.slug}-qr.png`} />
           </div>
         </div>
       </section>
