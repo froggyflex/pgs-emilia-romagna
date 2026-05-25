@@ -56,7 +56,7 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
   const sections = getEventSections(event);
   const liveMatches = event.matches.filter((match) => match.status === "live").length;
   const programItems = sections.reduce((total, section) => total + (section.programItems?.length || 0), 0);
-  const hasSoundtrack = event.slug === "don-bosco-cup-2026";
+  const hasSoundtrack = isDonBoscoCupEvent(event);
 
   return (
     <>
@@ -446,6 +446,11 @@ function getSectionItems<T extends { sectionId?: string }>(items: T[], section: 
     return items.filter((item) => !item.sectionId);
   }
   return [];
+}
+
+function isDonBoscoCupEvent(event: EventRecord) {
+  const normalized = `${event.slug} ${event.title}`.toLowerCase();
+  return normalized.includes("don-bosco-cup") || normalized.includes("don bosco cup");
 }
 
 function getFirstCampionatoId(event: EventRecord) {
