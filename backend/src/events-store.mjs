@@ -80,7 +80,12 @@ export async function upsertEvent(event) {
 
   if (event._id) {
     const { _id, ...rest } = payload;
-    await db.collection(EVENTS).updateOne({ _id: new ObjectId(_id) }, { $set: rest });
+    const result = await db.collection(EVENTS).updateOne({ _id: new ObjectId(_id) }, { $set: rest });
+
+    if (result.matchedCount === 0) {
+      throw new Error(`Event not found for update: ${_id}`);
+    }
+
     return payload;
   }
 

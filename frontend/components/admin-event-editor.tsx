@@ -20,6 +20,7 @@ import {
 import type { Comment, EventRecord, EventSection, EventSectionType, EventStatus, FeedPost, Match, MediaItem, ProgramItem, RankingRow } from "@/lib/types";
 
 type Tab = "details" | "sections" | "rankings" | "media" | "feed";
+type SaveMessage = { type: "success" | "error"; text: string } | null;
 
 const statusLabels: Record<EventStatus, string> = {
   draft: "Bozza",
@@ -29,28 +30,53 @@ const statusLabels: Record<EventStatus, string> = {
 };
 
 export function AdminEventEditor({ event: initialEvent, comments }: { event: EventRecord; comments: Comment[] }) {
-  const [event, setEvent] = useState(() => normalizeEventSections(initialEvent));
+  const [event, setEventState] = useState(() => normalizeEventSections(initialEvent));
+  const eventRef = useRef(event);
   const [tab, setTab] = useState<Tab>("details");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<SaveMessage>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    eventRef.current = event;
+  }, [event]);
+
+  useEffect(() => {
+    if (message?.type !== "success") return;
+    const timeout = window.setTimeout(() => setMessage(null), 2400);
+    return () => window.clearTimeout(timeout);
+  }, [message]);
+
+  function updateEvent(nextEvent: EventRecord) {
+    eventRef.current = nextEvent;
+    setEventState(nextEvent);
+    setMessage(null);
+  }
 
   function save() {
     startTransition(async () => {
-      setMessage("");
-      const response = await fetch("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(event)
-      });
+      setMessage(null);
 
-      if (!response.ok) {
-        setMessage("Salvataggio non riuscito.");
-        return;
+      try {
+        const response = await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(eventRef.current)
+        });
+
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok || !payload?.slug) {
+          setMessage({ type: "error", text: payload?.message || "Salvataggio non riuscito." });
+          return;
+        }
+
+        const saved = normalizeEventSections(payload as EventRecord);
+        eventRef.current = saved;
+        setEventState(saved);
+        setMessage({ type: "success", text: "Salvato." });
+      } catch {
+        setMessage({ type: "error", text: "Salvataggio non riuscito." });
       }
-
-      const saved = await response.json() as EventRecord;
-      setEvent(saved);
-      setMessage("Salvato.");
     });
   }
 
@@ -66,13 +92,13 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
           </div>
         </div>
         <div className="editor-actions">
-          {message ? <span className="status done">{message}</span> : null}
+          {message ? <span className={`status ${message.type === "success" ? "done" : "error"}`}>{message.text}</span> : null}
           <Link className="ghost-button" href={`/events/${event.slug}`}><Eye size={17} /> Pubblico</Link>
           <button className="button" type="button" onClick={save} disabled={isPending}><Save size={17} /> Salva</button>
         </div>
       </section>
       <div className="editor-save-dock">
-        {message ? <span className="status done">{message}</span> : null}
+        {message ? <span className={`status ${message.type === "success" ? "done" : "error"}`}>{message.text}</span> : null}
         <button className="button" type="button" onClick={save} disabled={isPending}><Save size={17} /> Salva</button>
       </div>
 
@@ -86,11 +112,11 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
         </aside>
 
         <div className="editor-panel">
-          {tab === "details" ? <DetailsEditor event={event} onChange={setEvent} /> : null}
-          {tab === "sections" ? <SectionsEditor event={event} onChange={setEvent} /> : null}
-          {tab === "rankings" ? <RankingsEditor event={event} onChange={setEvent} /> : null}
-          {tab === "media" ? <MediaEditor event={event} onChange={setEvent} comments={comments} /> : null}
-          {tab === "feed" ? <FeedEditor event={event} onChange={setEvent} /> : null}
+          {tab === "details" ? <DetailsEditor event={event} onChange={updateEvent} /> : null}
+          {tab === "sections" ? <SectionsEditor event={event} onChange={updateEvent} /> : null}
+          {tab === "rankings" ? <RankingsEditor event={event} onChange={updateEvent} /> : null}
+          {tab === "media" ? <MediaEditor event={event} onChange={updateEvent} comments={comments} /> : null}
+          {tab === "feed" ? <FeedEditor event={event} onChange={updateEvent} /> : null}
         </div>
       </section>
     </>

@@ -1033,6 +1033,11 @@ h3 {
   color: var(--green);
 }
 
+.status.error {
+  background: #fff1f3;
+  color: #b42318;
+}
+
 .status-draft {
   background: #fff7e6;
   color: #9a5b00;
