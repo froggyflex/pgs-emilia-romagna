@@ -66,7 +66,7 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
           <span className="kicker"><Radio size={16} /> Manifestazione principale</span>
           <h1>{event.title}</h1>
           <p className="lead">{event.subtitle}</p>
-          <p>{event.description}</p>
+          <p className="formatted-description">{event.description}</p>
           <div className="hero-actions">
             <a className="button" href="#eventi-interni"><PartyPopper size={18} /> Scegli evento</a>
             <a className="ghost-button" href="#qr"><CalendarDays size={18} /> QR manifestazione</a>
@@ -108,7 +108,7 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
                 {section.type === "campionato" ? "Campionato" : "Intrattenimento"}
               </span>
               <h3>{section.title}</h3>
-              <p>{section.subtitle || section.description || "Evento interno della manifestazione."}</p>
+              <p className="formatted-description">{section.subtitle || section.description || "Evento interno della manifestazione."}</p>
               <div className="internal-event-meta">
                 {section.startsAt ? <span><CalendarDays size={15} /> {formatDate(section.startsAt)}</span> : null}
                 <span><MapPin size={15} /> {section.location || event.location}</span>
@@ -190,7 +190,7 @@ async function ChampionshipEventView({
           <span className="kicker"><Radio size={16} /> {event.title}</span>
           <h1>{section.title}</h1>
           {section.subtitle ? <p className="lead">{section.subtitle}</p> : null}
-          {section.description ? <p>{section.description}</p> : null}
+          {section.description ? <p className="formatted-description">{section.description}</p> : null}
           <div className="hero-actions">
             <a className="button" href="#calendario"><CalendarDays size={18} /> Calendario</a>
             <a className="ghost-button" href="#classifiche"><Trophy size={18} /> Classifiche</a>
@@ -392,7 +392,7 @@ function EntertainmentEventView({
           <span className="kicker"><PartyPopper size={16} /> {event.title}</span>
           <h1>{section.title}</h1>
           {section.subtitle ? <p className="lead">{section.subtitle}</p> : null}
-          {section.description ? <p>{section.description}</p> : null}
+          {section.description ? <p className="formatted-description">{section.description}</p> : null}
           <div className="entertainment-meta">
             {section.startsAt ? <span><CalendarDays size={16} /> {formatDate(section.startsAt)}</span> : null}
             <span><MapPin size={16} /> {section.location || event.location}</span>
@@ -416,7 +416,7 @@ function EntertainmentEventView({
                   <time>{item.time}</time>
                   <div>
                     <strong>{item.title}</strong>
-                    {item.description ? <p className="muted">{item.description}</p> : null}
+                    {item.description ? <p className="muted formatted-description">{item.description}</p> : null}
                     {item.location ? <span><MapPin size={14} /> {item.location}</span> : null}
                   </div>
                 </article>

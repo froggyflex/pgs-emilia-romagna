@@ -10,5 +10,6 @@ dev-server*.log
 *-dev*.log
 frontend/public/uploads/*
 !frontend/public/uploads/.gitkeep
+!frontend/public/uploads/soundtrack.mpeg
 backend/uploads/*
 !backend/uploads/.gitkeep

@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  GripVertical,
   ImagePlus,
   PartyPopper,
   Plus,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 import type { Comment, EventRecord, EventSection, EventSectionType, EventStatus, FeedPost, Match, MediaItem, ProgramItem, RankingRow } from "@/lib/types";
 
-type Tab = "details" | "sections" | "matches" | "rankings" | "media" | "feed";
+type Tab = "details" | "sections" | "rankings" | "media" | "feed";
 
 const statusLabels: Record<EventStatus, string> = {
   draft: "Bozza",
@@ -70,12 +71,15 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
           <button className="button" type="button" onClick={save} disabled={isPending}><Save size={17} /> Salva</button>
         </div>
       </section>
+      <div className="editor-save-dock">
+        {message ? <span className="status done">{message}</span> : null}
+        <button className="button" type="button" onClick={save} disabled={isPending}><Save size={17} /> Salva</button>
+      </div>
 
       <section className="editor-layout">
         <aside className="editor-sidebar">
           <button className={`side-tab ${tab === "details" ? "active" : ""}`} type="button" onClick={() => setTab("details")}>Dettagli</button>
           <button className={`side-tab ${tab === "sections" ? "active" : ""}`} type="button" onClick={() => setTab("sections")}>Eventi interni</button>
-          <button className={`side-tab ${tab === "matches" ? "active" : ""}`} type="button" onClick={() => setTab("matches")}>Partite</button>
           <button className={`side-tab ${tab === "rankings" ? "active" : ""}`} type="button" onClick={() => setTab("rankings")}>Classifiche</button>
           <button className={`side-tab ${tab === "media" ? "active" : ""}`} type="button" onClick={() => setTab("media")}>Foto e video</button>
           <button className={`side-tab ${tab === "feed" ? "active" : ""}`} type="button" onClick={() => setTab("feed")}>Feed live</button>
@@ -84,7 +88,6 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
         <div className="editor-panel">
           {tab === "details" ? <DetailsEditor event={event} onChange={setEvent} /> : null}
           {tab === "sections" ? <SectionsEditor event={event} onChange={setEvent} /> : null}
-          {tab === "matches" ? <MatchesEditor event={event} onChange={setEvent} /> : null}
           {tab === "rankings" ? <RankingsEditor event={event} onChange={setEvent} /> : null}
           {tab === "media" ? <MediaEditor event={event} onChange={setEvent} comments={comments} /> : null}
           {tab === "feed" ? <FeedEditor event={event} onChange={setEvent} /> : null}
@@ -97,6 +100,7 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
 function SectionsEditor({ event, onChange }: EditorProps) {
   const sections = getEditableSections(event);
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id || "");
+  const [draggingSectionId, setDraggingSectionId] = useState("");
   const editorRef = useRef<HTMLDivElement | null>(null);
   const shouldScrollRef = useRef(false);
   const activeIndex = Math.max(0, sections.findIndex((section) => section.id === activeSectionId));
@@ -154,6 +158,20 @@ function SectionsEditor({ event, onChange }: EditorProps) {
     const nextActive = nextSections[Math.min(removedIndex, nextSections.length - 1)]?.id || "";
 
     setActiveSectionId(nextActive);
+    onChange({ ...event, sections: nextSections });
+  }
+
+  function moveSection(draggedId: string, targetId: string) {
+    if (!draggedId || draggedId === targetId) return;
+
+    const draggedIndex = sections.findIndex((section) => section.id === draggedId);
+    const targetIndex = sections.findIndex((section) => section.id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const nextSections = [...sections];
+    const [draggedSection] = nextSections.splice(draggedIndex, 1);
+    nextSections.splice(targetIndex, 0, draggedSection);
     onChange({ ...event, sections: nextSections });
   }
 
@@ -222,11 +240,29 @@ function SectionsEditor({ event, onChange }: EditorProps) {
               <div className="section-gallery-track" role="list" aria-label="Eventi interni">
                 {sections.map((section, index) => (
                   <button
-                    className={`section-gallery-card ${section.id === activeSection.id ? "active" : ""}`}
+                    className={`section-gallery-card ${section.id === activeSection.id ? "active" : ""} ${section.id === draggingSectionId ? "dragging" : ""}`}
                     type="button"
+                    draggable
                     onClick={() => setActiveSectionId(section.id)}
+                    onDragStart={(dragEvent) => {
+                      setDraggingSectionId(section.id);
+                      dragEvent.dataTransfer.effectAllowed = "move";
+                      dragEvent.dataTransfer.setData("text/plain", section.id);
+                    }}
+                    onDragOver={(dragEvent) => {
+                      dragEvent.preventDefault();
+                      dragEvent.dataTransfer.dropEffect = "move";
+                    }}
+                    onDrop={(dragEvent) => {
+                      dragEvent.preventDefault();
+                      const draggedId = dragEvent.dataTransfer.getData("text/plain") || draggingSectionId;
+                      moveSection(draggedId, section.id);
+                      setDraggingSectionId("");
+                    }}
+                    onDragEnd={() => setDraggingSectionId("")}
                     key={section.id}
                   >
+                    <GripVertical className="section-gallery-grip" size={17} aria-hidden="true" />
                     <span className="section-gallery-index">{index + 1}</span>
                     <span className="status">
                       {section.type === "campionato" ? <Trophy size={14} /> : <PartyPopper size={14} />}
@@ -282,7 +318,9 @@ function SectionsEditor({ event, onChange }: EditorProps) {
               </label>
             </div>
 
-            {activeSection.type === "intrattenimento" ? (
+            {activeSection.type === "campionato" ? (
+              <MatchesEditor event={event} onChange={onChange} section={activeSection} />
+            ) : (
               <div className="program-editor">
                 <div className="section-title-row">
                   <div>
@@ -305,7 +343,7 @@ function SectionsEditor({ event, onChange }: EditorProps) {
                   </div>
                 ))}
               </div>
-            ) : null}
+            )}
           </div>
           </>
         ) : null}
@@ -347,13 +385,13 @@ function DetailsEditor({ event, onChange }: EditorProps) {
   );
 }
 
-function MatchesEditor({ event, onChange }: EditorProps) {
-  const campionatoSections = getCampionatoSections(event);
+function MatchesEditor({ event, onChange, section }: EditorProps & { section: EventSection }) {
+  const matches = getMatchesForSection(event, section);
 
   function addMatch() {
     const match: Match = {
       id: crypto.randomUUID(),
-      sectionId: campionatoSections[0]?.id,
+      sectionId: section.id,
       category: event.categories[0] || "Categoria",
       homeTeam: "Squadra casa",
       awayTeam: "Squadra ospite",
@@ -365,7 +403,10 @@ function MatchesEditor({ event, onChange }: EditorProps) {
   }
 
   function patchMatch(id: string, patch: Partial<Match>) {
-    onChange({ ...event, matches: event.matches.map((match) => (match.id === id ? { ...match, ...patch } : match)) });
+    onChange({
+      ...event,
+      matches: event.matches.map((match) => (match.id === id ? { ...match, sectionId: match.sectionId || section.id, ...patch } : match))
+    });
   }
 
   function removeMatch(id: string) {
@@ -373,11 +414,18 @@ function MatchesEditor({ event, onChange }: EditorProps) {
   }
 
   return (
-    <div>
-      <PanelHeader title="Partite" text="Calendario, score e stato live." action={<button className="button" type="button" onClick={addMatch}><CalendarPlus size={17} /> Aggiungi</button>} />
+    <div className="section-matches-editor">
+      <div className="section-title-row">
+        <div>
+          <span className="small-label">Partite campionato</span>
+          <h3>Calendario partite</h3>
+          <p className="muted">Partite, punteggi finali e stato live relativi a questo campionato.</p>
+        </div>
+        <button className="button" type="button" onClick={addMatch}><CalendarPlus size={17} /> Aggiungi partita</button>
+      </div>
       <div className="stack">
-        {event.matches.length === 0 ? <div className="empty">Nessuna partita inserita.</div> : null}
-        {event.matches.map((match) => (
+        {matches.length === 0 ? <div className="empty">Nessuna partita inserita per questo campionato.</div> : null}
+        {matches.map((match) => (
           <div className={`editor-item match-editor-card status-card-${match.status}`} key={match.id}>
             <div className="item-toolbar">
               <div>
@@ -390,12 +438,6 @@ function MatchesEditor({ event, onChange }: EditorProps) {
               <button className="icon-danger" type="button" onClick={() => removeMatch(match.id)} aria-label="Elimina partita"><Trash2 size={17} /></button>
             </div>
             <div className="form-grid compact">
-              <SectionSelect
-                label="Campionato"
-                value={match.sectionId || ""}
-                sections={campionatoSections}
-                onChange={(sectionId) => patchMatch(match.id, { sectionId })}
-              />
               <Input label="Categoria" value={match.category} onChange={(category) => patchMatch(match.id, { category })} />
               <Input label="Campo" value={match.court} onChange={(court) => patchMatch(match.id, { court })} />
               <Input label="Squadra casa" value={match.homeTeam} onChange={(homeTeam) => patchMatch(match.id, { homeTeam })} />
@@ -905,6 +947,18 @@ function getEditableSections(event: EventRecord): EventSection[] {
 
 function getCampionatoSections(event: EventRecord) {
   return getEditableSections(event).filter((section) => section.type === "campionato");
+}
+
+function getMatchesForSection(event: EventRecord, section: EventSection) {
+  const scoped = event.matches.filter((match) => match.sectionId === section.id);
+  if (scoped.length > 0) return scoped;
+
+  const firstCampionatoId = getCampionatoSections(event)[0]?.id;
+  if (section.id === firstCampionatoId) {
+    return event.matches.filter((match) => !match.sectionId);
+  }
+
+  return [];
 }
 
 function slugify(value: string) {
