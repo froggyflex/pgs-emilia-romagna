@@ -2,19 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { ArrowLeft, CalendarDays, MapPin, MessageCircle, PartyPopper, Radio, RefreshCw, Trophy, Video } from "lucide-react";
-import type { Comment, EventRecord, EventSection, MatchStatus, RankingRow } from "@/lib/types";
+import type { Comment, EventRecord, EventSection, RankingRow } from "@/lib/types";
 import { CommentBox } from "./comment-box";
 import { MainEventSoundtrack } from "./main-event-soundtrack";
 import { MediaCard } from "./media-card";
 import { MediaContributionForm } from "./media-contribution-form";
+import { MatchSchedule } from "./match-schedule";
 import { ShareCodeControls } from "./share-code-controls";
-
-const statusLabels: Record<MatchStatus, string> = {
-  scheduled: "In programma",
-  live: "Live",
-  finished: "Finita",
-  postponed: "Rinviata"
-};
 
 export function EventUnavailableView({ event }: { event: EventRecord }) {
   return (
@@ -224,46 +218,30 @@ async function ChampionshipEventView({
         <a href="#commenti">Commenti</a>
       </nav>
 
-      <section className="section two-grid" id="calendario">
-        <div className="card">
-          <div className="card-body">
-            <div className="section-title-row">
-              <div>
-                <span className="small-label">Programma</span>
-                <h2>Calendario partite</h2>
-                <p className="muted">Orari, campi, punteggi e stato aggiornati dalla regia evento.</p>
-              </div>
-              {liveMatch ? <span className="status live">Live ora</span> : <span className="status">Aggiornato</span>}
-            </div>
-            {matches.length === 0 ? <div className="empty">Nessuna partita inserita.</div> : null}
-            {matches.map((match) => (
-              <div className="match-row" key={match.id}>
-                <div>
-                  <strong>{match.homeTeam} - {match.awayTeam}</strong>
-                  <div className="match-meta">
-                    <span><CalendarDays size={14} /> {formatDate(match.startsAt)}</span>
-                    <span><MapPin size={14} /> {match.court}</span>
-                    <span><Trophy size={14} /> {match.category}</span>
-                  </div>
-                </div>
-                <div className="score">{match.homeScore ?? "-"}:{match.awayScore ?? "-"}</div>
-                <span className={`status ${match.status === "live" ? "live" : match.status === "finished" ? "done" : ""}`}>
-                  {statusLabels[match.status]}
-                </span>
-              </div>
-            ))}
-          </div>
+      <section className="quick-access-bar" id="qr">
+        <div>
+          <span className="small-label">Accesso rapido</span>
+          <h2>QR evento</h2>
+          <p className="muted">Apri direttamente questo campionato da ingresso, reception o materiale stampato.</p>
         </div>
+        <div className="quick-access-actions">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={qrDataUrl} width={96} height={96} alt="QR code evento" />
+          <ShareCodeControls url={sectionUrl} qrDataUrl={qrDataUrl} fileName={`${event.slug}-${section.slug}-qr.png`} />
+        </div>
+      </section>
 
-        <div className="card">
-          <div className="card-body qr-card">
-            <span className="small-label">Accesso rapido</span>
-            <h2>QR evento</h2>
-            <p className="muted">Da stampare o mostrare all'ingresso per aprire direttamente questo campionato.</p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={qrDataUrl} width={220} height={220} alt="QR code evento" />
-            <ShareCodeControls url={sectionUrl} qrDataUrl={qrDataUrl} fileName={`${event.slug}-${section.slug}-qr.png`} />
+      <section className="section card" id="calendario">
+        <div className="card-body">
+          <div className="section-title-row">
+            <div>
+              <span className="small-label">Programma</span>
+              <h2>Calendario partite</h2>
+              <p className="muted">Cerca una squadra, controlla il campo e scorri le gare organizzate per girone.</p>
+            </div>
+            {liveMatch ? <span className="status live">Live ora</span> : <span className="status">Aggiornato</span>}
           </div>
+          <MatchSchedule matches={matches} />
         </div>
       </section>
 
