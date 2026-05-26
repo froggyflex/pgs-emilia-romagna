@@ -32,6 +32,10 @@ export async function listEvents(includeDrafts = false) {
   const db = await getDb();
 
   if (!db) {
+    if (includeDrafts && process.env.MONGODB_URI) {
+      throw new Error("MongoDB is not reachable. Admin events cannot be loaded safely.");
+    }
+
     const events = getMemoryEvents();
     return includeDrafts ? events : events.filter((event) => PUBLIC_EVENT_STATUSES.includes(event.status));
   }
@@ -46,6 +50,10 @@ export async function getEventBySlug(slug, includeDrafts = false) {
   const db = await getDb();
 
   if (!db) {
+    if (includeDrafts && process.env.MONGODB_URI) {
+      throw new Error("MongoDB is not reachable. Admin event data cannot be loaded safely.");
+    }
+
     return getMemoryEvents().find((event) => event.slug === slug && (includeDrafts || PUBLIC_EVENT_STATUSES.includes(event.status))) || null;
   }
 
@@ -55,7 +63,7 @@ export async function getEventBySlug(slug, includeDrafts = false) {
 }
 
 export async function upsertEvent(event) {
-  const db = await getDb();
+  const db = await getWriteDb();
   const updatedAt = new Date().toISOString();
   const payload = { ...event, updatedAt };
 
@@ -86,17 +94,28 @@ export async function upsertEvent(event) {
       throw new Error(`Event not found for update: ${_id}`);
     }
 
-    return payload;
+    const saved = await db.collection(EVENTS).findOne({ _id: new ObjectId(_id) });
+    if (!saved) {
+      throw new Error(`Event update could not be verified: ${_id}`);
+    }
+
+    return serializeEvent(saved);
   }
 
   const createdAt = event.createdAt || updatedAt;
   const { _id, ...insertable } = { ...payload, createdAt };
   const result = await db.collection(EVENTS).insertOne(insertable);
-  return { ...insertable, _id: result.insertedId.toString() };
+  const saved = await db.collection(EVENTS).findOne({ _id: result.insertedId });
+
+  if (!saved) {
+    throw new Error(`Event insert could not be verified: ${result.insertedId.toString()}`);
+  }
+
+  return serializeEvent(saved);
 }
 
 export async function deleteEvent(id) {
-  const db = await getDb();
+  const db = await getWriteDb();
 
   if (!db) {
     memoryStore.__PGS_EVENTS__ = getMemoryEvents().filter((event) => event._id !== id && event.slug !== id);
@@ -108,7 +127,7 @@ export async function deleteEvent(id) {
 }
 
 export async function incrementMediaLike(eventSlug, mediaId) {
-  const db = await getDb();
+  const db = await getWriteDb();
 
   if (!db) {
     const event = getMemoryEvents().find((item) => item.slug === eventSlug);
@@ -133,7 +152,7 @@ export async function incrementMediaLike(eventSlug, mediaId) {
 }
 
 export async function addEventMedia(eventSlug, mediaItems) {
-  const db = await getDb();
+  const db = await getWriteDb();
 
   if (!db) {
     const event = getMemoryEvents().find((item) => item.slug === eventSlug && item.status === "published");
@@ -181,7 +200,7 @@ export async function listComments(eventId, targetType, targetId) {
 }
 
 export async function addComment(comment) {
-  const db = await getDb();
+  const db = await getWriteDb();
   const payload = {
     ...comment,
     id: randomUUID(),
@@ -198,6 +217,16 @@ export async function addComment(comment) {
 
   await db.collection(COMMENTS).insertOne(payload);
   return payload;
+}
+
+async function getWriteDb() {
+  const db = await getDb();
+
+  if (!db && process.env.MONGODB_URI) {
+    throw new Error("MongoDB is not reachable. The data was not saved.");
+  }
+
+  return db;
 }
 
 function serializeEvent(event) {

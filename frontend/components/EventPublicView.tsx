@@ -240,7 +240,11 @@ async function ChampionshipEventView({
               <div className="match-row" key={match.id}>
                 <div>
                   <strong>{match.homeTeam} - {match.awayTeam}</strong>
-                  <p className="muted">{formatDate(match.startsAt)} - {match.court} - {match.category}</p>
+                  <div className="match-meta">
+                    <span><CalendarDays size={14} /> {formatDate(match.startsAt)}</span>
+                    <span><MapPin size={14} /> {match.court}</span>
+                    <span><Trophy size={14} /> {match.category}</span>
+                  </div>
                 </div>
                 <div className="score">{match.homeScore ?? "-"}:{match.awayScore ?? "-"}</div>
                 <span className={`status ${match.status === "live" ? "live" : match.status === "finished" ? "done" : ""}`}>

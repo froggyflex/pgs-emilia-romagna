@@ -171,7 +171,7 @@ createServer(async (request, response) => {
     sendJson(response, 404, { message: "Route not found" });
   } catch (error) {
     console.error(error);
-    sendJson(response, 500, { message: "Backend request failed" });
+    sendJson(response, 500, { message: error instanceof Error ? error.message : "Backend request failed" });
   }
 }).listen(port, () => {
   console.log(`PGS backend listening on http://127.0.0.1:${port}`);
