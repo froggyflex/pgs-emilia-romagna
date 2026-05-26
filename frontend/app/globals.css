@@ -510,6 +510,17 @@ h3 {
   background: rgba(255, 255, 255, 0.94);
 }
 
+.hero-badge-link {
+  color: inherit;
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.hero-badge-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(16, 24, 40, 0.14);
+}
+
 .hero-badge strong {
   display: block;
   color: var(--blue);
@@ -1133,8 +1144,31 @@ h3 {
   line-height: 1;
 }
 
+.match-meta a {
+  text-decoration: none;
+}
+
 .match-meta svg {
   color: var(--blue);
+}
+
+.match-field-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: var(--blue);
+  font-size: 0.84rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.match-field-link:hover {
+  border-color: var(--blue);
+  background: #eaf4ff;
 }
 
 .match-schedule {
@@ -1186,6 +1220,46 @@ h3 {
   color: var(--blue);
   font-size: 1.35rem;
   line-height: 1;
+}
+
+.schedule-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.schedule-legend-item {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid var(--girone-border, #bfdcff);
+  border-radius: 8px;
+  background: var(--girone-bg, #eaf4ff);
+}
+
+.schedule-legend-swatch {
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  border: 1px solid var(--girone-border, #bfdcff);
+  border-radius: 4px;
+  background: var(--girone-color, var(--blue));
+}
+
+.schedule-legend-item strong {
+  display: block;
+  color: var(--girone-color, var(--blue));
+  font-size: 0.86rem;
+}
+
+.schedule-legend-item small {
+  display: block;
+  margin-top: 3px;
+  color: #475467;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .schedule-groups {
@@ -2191,6 +2265,19 @@ h3 {
   background: var(--red);
 }
 
+.field-editor-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.field-editor-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--blue);
+}
+
 .section-matches-editor {
   display: grid;
   gap: 14px;
@@ -2340,6 +2427,7 @@ h3 {
 
   .quick-access-bar,
   .match-schedule-controls,
+  .schedule-legend,
   .schedule-match-card {
     grid-template-columns: 1fr;
   }

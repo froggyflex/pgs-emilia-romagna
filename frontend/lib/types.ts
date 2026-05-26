@@ -33,6 +33,13 @@ export type Team = {
   city?: string;
 };
 
+export type EventField = {
+  id: string;
+  name: string;
+  address: string;
+  mapUrl?: string;
+};
+
 export type Match = {
   id: string;
   sectionId?: string;
@@ -116,6 +123,7 @@ export type EventRecord = {
   qrUrl?: string;
   sections?: EventSection[];
   categories: string[];
+  fields?: EventField[];
   teams: Team[];
   matches: Match[];
   rankingColumns?: string[];

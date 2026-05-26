@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Search, Trophy } from "lucide-react";
-import type { Match, MatchStatus } from "@/lib/types";
+import type { EventField, Match, MatchStatus } from "@/lib/types";
 import type { CSSProperties } from "react";
 
 const statusLabels: Record<MatchStatus, string> = {
@@ -14,7 +14,7 @@ const statusLabels: Record<MatchStatus, string> = {
 
 const pageSize = 8;
 
-export function MatchSchedule({ matches }: { matches: Match[] }) {
+export function MatchSchedule({ matches, fields }: { matches: Match[]; fields: EventField[] }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
@@ -49,6 +49,7 @@ export function MatchSchedule({ matches }: { matches: Match[] }) {
   const totalPages = Math.max(1, Math.ceil(filteredMatches.length / pageSize));
   const visibleMatches = filteredMatches.slice((page - 1) * pageSize, page * pageSize);
   const groupedMatches = groupByGirone(visibleMatches);
+  const legendGroups = useMemo(() => getLegendGroups(sortedMatches), [sortedMatches]);
 
   useEffect(() => {
     setPage(1);
@@ -79,6 +80,31 @@ export function MatchSchedule({ matches }: { matches: Match[] }) {
 
       {matches.length === 0 ? <div className="empty">Nessuna partita inserita.</div> : null}
       {matches.length > 0 && filteredMatches.length === 0 ? <div className="empty">Nessuna partita trovata.</div> : null}
+      {legendGroups.length > 0 ? (
+        <div className="schedule-legend" aria-label="Legenda gironi e squadre">
+          {legendGroups.map((group) => {
+            const colors = getGironeColors(group.girone);
+
+            return (
+              <div
+                className="schedule-legend-item"
+                style={{
+                  "--girone-bg": colors.background,
+                  "--girone-border": colors.border,
+                  "--girone-color": colors.text
+                } as CSSProperties}
+                key={group.girone}
+              >
+                <span className="schedule-legend-swatch" />
+                <div>
+                  <strong>{group.girone}</strong>
+                  <small>{group.teams.join(", ")}</small>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="schedule-groups">
         {groupedMatches.map(([girone, items]) => {
@@ -105,7 +131,7 @@ export function MatchSchedule({ matches }: { matches: Match[] }) {
                       <strong>{match.homeTeam} - {match.awayTeam}</strong>
                       <div className="match-meta">
                         <span><CalendarDays size={14} /> {formatDate(match.startsAt)}</span>
-                        <span><MapPin size={14} /> {match.court}</span>
+                        <FieldMapLink court={match.court} fields={fields} />
                       </div>
                     </div>
                     <div className="schedule-match-side">
@@ -148,8 +174,47 @@ function groupByGirone(matches: Match[]) {
   return [...groups.entries()];
 }
 
+function getLegendGroups(matches: Match[]) {
+  const groups = new Map<string, Set<string>>();
+
+  for (const match of matches) {
+    const girone = getGironeLabel(match);
+    const teams = groups.get(girone) || new Set<string>();
+    teams.add(match.homeTeam);
+    teams.add(match.awayTeam);
+    groups.set(girone, teams);
+  }
+
+  return [...groups.entries()].map(([girone, teams]) => ({
+    girone,
+    teams: [...teams].sort((a, b) => a.localeCompare(b, "it"))
+  }));
+}
+
 function getGironeLabel(match: Match) {
   return match.category?.trim() || "Senza girone";
+}
+
+function FieldMapLink({ court, fields }: { court: string; fields: EventField[] }) {
+  const field = fields.find((item) => item.name.trim().toLowerCase() === court.trim().toLowerCase());
+  const mapUrl = getFieldMapUrl(field);
+
+  if (!mapUrl) {
+    return <span><MapPin size={14} /> {court || "Campo non definito"}</span>;
+  }
+
+  return (
+    <a className="match-field-link" href={mapUrl} target="_blank" rel="noreferrer">
+      <MapPin size={14} /> {court}
+    </a>
+  );
+}
+
+function getFieldMapUrl(field?: EventField) {
+  if (!field) return "";
+  if (field.mapUrl?.trim()) return field.mapUrl.trim();
+  if (!field.address.trim()) return "";
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(field.address.trim())}`;
 }
 
 function getGironeColors(label: string) {

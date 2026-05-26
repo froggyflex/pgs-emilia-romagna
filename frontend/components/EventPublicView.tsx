@@ -10,6 +10,8 @@ import { MediaContributionForm } from "./media-contribution-form";
 import { MatchSchedule } from "./match-schedule";
 import { ShareCodeControls } from "./share-code-controls";
 
+const eurocampMapsUrl = "https://www.google.com/maps/search/?api=1&query=Eurocamp%20Cesenatico";
+
 export function EventUnavailableView({ event }: { event: EventRecord }) {
   return (
     <section className="event-status-page">
@@ -68,13 +70,13 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
         </div>
         <div className="hero-media">
           <Image src={event.coverImage} width={900} height={1120} alt={event.title} priority />
-          <div className="hero-badge">
+          <a className="hero-badge hero-badge-link" href={eurocampMapsUrl} target="_blank" rel="noreferrer">
             <div>
               <strong>{event.location}</strong>
               <span className="muted">{formatRange(event.startsAt, event.endsAt)}</span>
             </div>
             <MapPin color="#15427f" />
-          </div>
+          </a>
         </div>
       </section>
 
@@ -241,7 +243,7 @@ async function ChampionshipEventView({
             </div>
             {liveMatch ? <span className="status live">Live ora</span> : <span className="status">Aggiornato</span>}
           </div>
-          <MatchSchedule matches={matches} />
+          <MatchSchedule matches={matches} fields={event.fields || []} />
         </div>
       </section>
 

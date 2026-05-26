@@ -16,6 +16,7 @@ export const eventSchema = z.object({
   qrUrl: z.string().optional(),
   sections: z.array(z.any()).optional(),
   categories: z.array(z.string()),
+  fields: z.array(z.any()).optional(),
   teams: z.array(z.any()),
   matches: z.array(z.any()),
   rankingColumns: z.array(z.string()).optional(),

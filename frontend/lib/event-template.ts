@@ -31,6 +31,7 @@ export function createDraftEvent(): EventRecord {
       }
     ],
     categories: ["Under 14", "Under 16"],
+    fields: [],
     teams: [],
     matches: [],
     rankings: [],

@@ -48,6 +48,20 @@ export const seedEvent: EventRecord = {
     }
   ],
   categories: ["Under 14", "Under 16"],
+  fields: [
+    {
+      id: "field-pala-cesenatico",
+      name: "Pala Cesenatico",
+      address: "Via Magellano 23, Cesenatico FC",
+      mapUrl: ""
+    },
+    {
+      id: "field-campo-centrale",
+      name: "Campo Centrale",
+      address: "Cesenatico FC",
+      mapUrl: ""
+    }
+  ],
   teams: [
     { id: "team-u14-1", name: "PGS Aurora", category: "Under 14", city: "Bologna" },
     { id: "team-u14-2", name: "PGS San Paolo", category: "Under 14", city: "Modena" },

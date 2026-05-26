@@ -10,6 +10,7 @@ import {
   Eye,
   GripVertical,
   ImagePlus,
+  MapPinned,
   PartyPopper,
   Plus,
   Radio,
@@ -17,9 +18,9 @@ import {
   Trophy,
   Trash2
 } from "lucide-react";
-import type { Comment, EventRecord, EventSection, EventSectionType, EventStatus, FeedPost, Match, MediaItem, ProgramItem, RankingRow } from "@/lib/types";
+import type { Comment, EventField, EventRecord, EventSection, EventSectionType, EventStatus, FeedPost, Match, MediaItem, ProgramItem, RankingRow } from "@/lib/types";
 
-type Tab = "details" | "sections" | "rankings" | "media" | "feed";
+type Tab = "details" | "sections" | "fields" | "rankings" | "media" | "feed";
 type SaveMessage = { type: "success" | "error"; text: string } | null;
 
 const statusLabels: Record<EventStatus, string> = {
@@ -106,6 +107,7 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
         <aside className="editor-sidebar">
           <button className={`side-tab ${tab === "details" ? "active" : ""}`} type="button" onClick={() => setTab("details")}>Dettagli</button>
           <button className={`side-tab ${tab === "sections" ? "active" : ""}`} type="button" onClick={() => setTab("sections")}>Eventi interni</button>
+          <button className={`side-tab ${tab === "fields" ? "active" : ""}`} type="button" onClick={() => setTab("fields")}>Campi</button>
           <button className={`side-tab ${tab === "rankings" ? "active" : ""}`} type="button" onClick={() => setTab("rankings")}>Classifiche</button>
           <button className={`side-tab ${tab === "media" ? "active" : ""}`} type="button" onClick={() => setTab("media")}>Foto e video</button>
           <button className={`side-tab ${tab === "feed" ? "active" : ""}`} type="button" onClick={() => setTab("feed")}>Feed live</button>
@@ -114,6 +116,7 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
         <div className="editor-panel">
           {tab === "details" ? <DetailsEditor event={event} onChange={updateEvent} /> : null}
           {tab === "sections" ? <SectionsEditor event={event} onChange={updateEvent} /> : null}
+          {tab === "fields" ? <FieldsEditor event={event} onChange={updateEvent} /> : null}
           {tab === "rankings" ? <RankingsEditor event={event} onChange={updateEvent} /> : null}
           {tab === "media" ? <MediaEditor event={event} onChange={updateEvent} comments={comments} /> : null}
           {tab === "feed" ? <FeedEditor event={event} onChange={updateEvent} /> : null}
@@ -411,8 +414,72 @@ function DetailsEditor({ event, onChange }: EditorProps) {
   );
 }
 
+function FieldsEditor({ event, onChange }: EditorProps) {
+  const fields = getEventFields(event);
+
+  function addField() {
+    const field: EventField = {
+      id: crypto.randomUUID(),
+      name: `Campo ${fields.length + 1}`,
+      address: "",
+      mapUrl: ""
+    };
+
+    onChange({ ...event, fields: [...fields, field] });
+  }
+
+  function patchField(id: string, patch: Partial<EventField>) {
+    onChange({
+      ...event,
+      fields: fields.map((field) => (field.id === id ? { ...field, ...patch } : field))
+    });
+  }
+
+  function removeField(id: string) {
+    const removedField = fields.find((field) => field.id === id);
+    onChange({
+      ...event,
+      fields: fields.filter((field) => field.id !== id),
+      matches: removedField
+        ? event.matches.map((match) => (match.court === removedField.name ? { ...match, court: "" } : match))
+        : event.matches
+    });
+  }
+
+  return (
+    <div>
+      <PanelHeader
+        title="Campi"
+        text="Definisci i campi una volta sola: nelle partite verranno selezionati da menu e sul sito pubblico saranno apribili su Google Maps."
+        action={<button className="button" type="button" onClick={addField}><MapPinned size={17} /> Aggiungi campo</button>}
+      />
+      <div className="stack">
+        {fields.length === 0 ? <div className="empty">Nessun campo configurato. Aggiungi almeno nome e indirizzo.</div> : null}
+        {fields.map((field) => (
+          <div className="editor-item field-editor-card" key={field.id}>
+            <div className="item-toolbar">
+              <div>
+                <span className="status"><MapPinned size={14} /> Campo</span>
+                <strong>{field.name}</strong>
+                <p className="muted">{field.address || "Indirizzo non inserito"}</p>
+              </div>
+              <button className="icon-danger" type="button" onClick={() => removeField(field.id)} aria-label="Elimina campo"><Trash2 size={17} /></button>
+            </div>
+            <div className="form-grid compact">
+              <Input label="Nome campo" value={field.name} onChange={(name) => patchField(field.id, { name })} />
+              <Input label="Indirizzo" value={field.address} onChange={(address) => patchField(field.id, { address })} />
+              <Input label="Link Google Maps opzionale" value={field.mapUrl || ""} onChange={(mapUrl) => patchField(field.id, { mapUrl })} full />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MatchesEditor({ event, onChange, section }: EditorProps & { section: EventSection }) {
   const matches = getMatchesForSection(event, section);
+  const fields = getEventFields(event);
   const matchRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingScrollMatchIdRef = useRef("");
 
@@ -431,7 +498,7 @@ function MatchesEditor({ event, onChange, section }: EditorProps & { section: Ev
       category: event.categories[0] || "Categoria",
       homeTeam: "Squadra casa",
       awayTeam: "Squadra ospite",
-      court: "Campo",
+      court: fields[0]?.name || "",
       startsAt: new Date().toISOString(),
       status: "scheduled"
     };
@@ -483,7 +550,14 @@ function MatchesEditor({ event, onChange, section }: EditorProps & { section: Ev
             </div>
             <div className="form-grid compact">
               <Input label="Categoria" value={match.category} onChange={(category) => patchMatch(match.id, { category })} />
-              <Input label="Campo" value={match.court} onChange={(court) => patchMatch(match.id, { court })} />
+              <label className="field">
+                <span>Campo</span>
+                <select value={match.court} onChange={(input) => patchMatch(match.id, { court: input.target.value })}>
+                  <option value="">Seleziona campo</option>
+                  {fields.map((field) => <option value={field.name} key={field.id}>{field.name}</option>)}
+                  {match.court && !fields.some((field) => field.name === match.court) ? <option value={match.court}>{match.court}</option> : null}
+                </select>
+              </label>
               <Input label="Squadra casa" value={match.homeTeam} onChange={(homeTeam) => patchMatch(match.id, { homeTeam })} />
               <Input label="Squadra ospite" value={match.awayTeam} onChange={(awayTeam) => patchMatch(match.id, { awayTeam })} />
               <Input label="Inizio" type="datetime-local" value={toLocalInput(match.startsAt)} onChange={(startsAt) => patchMatch(match.id, { startsAt: toIso(startsAt) })} />
@@ -994,6 +1068,17 @@ function getEditableSections(event: EventRecord): EventSection[] {
 
 function getCampionatoSections(event: EventRecord) {
   return getEditableSections(event).filter((section) => section.type === "campionato");
+}
+
+function getEventFields(event: EventRecord): EventField[] {
+  if (event.fields?.length) return event.fields;
+
+  return Array.from(new Set(event.matches.map((match) => match.court).filter(Boolean))).map((name) => ({
+    id: `field-${slugify(name)}`,
+    name,
+    address: "",
+    mapUrl: ""
+  }));
 }
 
 function getMatchesForSection(event: EventRecord, section: EventSection) {
