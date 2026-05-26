@@ -70,7 +70,7 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
         </div>
         <div className="hero-media">
           <Image src={event.coverImage} width={900} height={1120} alt={event.title} priority />
-          <a className="hero-badge hero-badge-link" href={eurocampMapsUrl} target="_blank" rel="noreferrer">
+          <a className="hero-badge hero-badge-link" href={getLocationMapsUrl(event.location)} target="_blank" rel="noreferrer">
             <div>
               <strong>{event.location}</strong>
               <span className="muted">{formatRange(event.startsAt, event.endsAt)}</span>
@@ -195,13 +195,13 @@ async function ChampionshipEventView({
         </div>
         <div className="hero-media">
           <Image src={section.heroImage || event.coverImage} width={900} height={1120} alt={section.title} priority />
-          <div className="hero-badge">
+          <a className="hero-badge hero-badge-link" href={getLocationMapsUrl(section.location || event.location)} target="_blank" rel="noreferrer">
             <div>
               <strong>{section.location || event.location}</strong>
               <span className="muted">{event.categories.join(" / ")}</span>
             </div>
             <MapPin color="#15427f" />
-          </div>
+          </a>
         </div>
       </section>
 
@@ -379,7 +379,9 @@ function EntertainmentEventView({
           {section.description ? <p className="formatted-description">{section.description}</p> : null}
           <div className="entertainment-meta">
             {section.startsAt ? <span><CalendarDays size={16} /> {formatDate(section.startsAt)}</span> : null}
-            <span><MapPin size={16} /> {section.location || event.location}</span>
+            <a className="event-location-link" href={getLocationMapsUrl(section.location || event.location)} target="_blank" rel="noreferrer">
+              <MapPin size={16} /> {section.location || event.location}
+            </a>
           </div>
         </div>
       </section>
@@ -435,6 +437,12 @@ function getSectionItems<T extends { sectionId?: string }>(items: T[], section: 
 function isDonBoscoCupEvent(event: EventRecord) {
   const normalized = `${event.slug} ${event.title}`.toLowerCase();
   return normalized.includes("don-bosco-cup") || normalized.includes("don bosco cup");
+}
+
+function getLocationMapsUrl(location: string) {
+  const normalized = location.toLowerCase();
+  if (normalized.includes("cesenatico")) return eurocampMapsUrl;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
 }
 
 function getFirstCampionatoId(event: EventRecord) {

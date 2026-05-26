@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Search, Trophy } from "lucide-react";
 import type { EventField, Match, MatchStatus } from "@/lib/types";
 import type { CSSProperties } from "react";
@@ -12,11 +12,12 @@ const statusLabels: Record<MatchStatus, string> = {
   postponed: "Rinviata"
 };
 
-const pageSize = 8;
+const pageSize = 4;
 
 export function MatchSchedule({ matches, fields }: { matches: Match[]; fields: EventField[] }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const scheduleRef = useRef<HTMLDivElement>(null);
 
   const sortedMatches = useMemo(() => {
     return [...matches].sort((a, b) => {
@@ -61,25 +62,16 @@ export function MatchSchedule({ matches, fields }: { matches: Match[]; fields: E
     }
   }, [page, totalPages]);
 
-  return (
-    <div className="match-schedule">
-      <div className="match-schedule-controls">
-        <label className="schedule-search">
-          <Search size={17} />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Cerca squadra, campo, girone..."
-          />
-        </label>
-        <div className="schedule-count">
-          <strong>{filteredMatches.length}</strong>
-          <span>{filteredMatches.length === 1 ? "partita" : "partite"}</span>
-        </div>
-      </div>
+  function changePage(nextPage: number) {
+    setPage(nextPage);
+    window.requestAnimationFrame(() => {
+      const calendarSection = document.getElementById("calendario");
+      (calendarSection || scheduleRef.current)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
-      {matches.length === 0 ? <div className="empty">Nessuna partita inserita.</div> : null}
-      {matches.length > 0 && filteredMatches.length === 0 ? <div className="empty">Nessuna partita trovata.</div> : null}
+  return (
+    <div className="match-schedule" ref={scheduleRef}>
       {legendGroups.length > 0 ? (
         <div className="schedule-legend" aria-label="Legenda gironi e squadre">
           {legendGroups.map((group) => {
@@ -105,6 +97,24 @@ export function MatchSchedule({ matches, fields }: { matches: Match[]; fields: E
           })}
         </div>
       ) : null}
+
+      <div className="match-schedule-controls">
+        <label className="schedule-search">
+          <Search size={17} />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Cerca squadra, campo, girone..."
+          />
+        </label>
+        <div className="schedule-count">
+          <strong>{filteredMatches.length}</strong>
+          <span>{filteredMatches.length === 1 ? "partita" : "partite"}</span>
+        </div>
+      </div>
+
+      {matches.length === 0 ? <div className="empty">Nessuna partita inserita.</div> : null}
+      {matches.length > 0 && filteredMatches.length === 0 ? <div className="empty">Nessuna partita trovata.</div> : null}
 
       <div className="schedule-groups">
         {groupedMatches.map(([girone, items]) => {
@@ -150,11 +160,11 @@ export function MatchSchedule({ matches, fields }: { matches: Match[]; fields: E
 
       {filteredMatches.length > pageSize ? (
         <div className="schedule-pagination">
-          <button className="ghost-button" type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1}>
+          <button className="ghost-button" type="button" onClick={() => changePage(Math.max(1, page - 1))} disabled={page === 1}>
             <ChevronLeft size={17} /> Precedente
           </button>
           <span>Pagina {page} di {totalPages}</span>
-          <button className="ghost-button" type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page === totalPages}>
+          <button className="ghost-button" type="button" onClick={() => changePage(Math.min(totalPages, page + 1))} disabled={page === totalPages}>
             Successiva <ChevronRight size={17} />
           </button>
         </div>
@@ -192,7 +202,16 @@ function getLegendGroups(matches: Match[]) {
 }
 
 function getGironeLabel(match: Match) {
-  return match.category?.trim() || "Senza girone";
+  return normalizeGironeLabel(match.category);
+}
+
+function normalizeGironeLabel(value?: string) {
+  const cleaned = value
+    ?.trim()
+    .replace(/\s*(?:-|\u2013|\u2014)?\s*\(?\s*gara\s*\d+\s*\)?\s*$/i, "")
+    .replace(/\s+/g, " ");
+
+  return cleaned || "Senza girone";
 }
 
 function FieldMapLink({ court, fields }: { court: string; fields: EventField[] }) {
@@ -226,7 +245,8 @@ function getGironeColors(label: string) {
   const colorOptions = [
     { words: ["arancio", "arancione"], background: "#fff3e6", border: "#ffd7a8", text: "#8a3f00", muted: "#9a5b00" },
     { words: ["rosso", "rossa"], background: "#fff1f3", border: "#fecdd6", text: "#a31717", muted: "#b42318" },
-    { words: ["blu", "azzurro", "azzurra"], background: "#eaf4ff", border: "#bfdcff", text: "#15427f", muted: "#24589c" },
+    { words: ["azzurro", "azzurra"], background: "#e6f7ff", border: "#9bdcf5", text: "#075985", muted: "#0e7490" },
+    { words: ["blu"], background: "#eaf1ff", border: "#b9d0ff", text: "#173f8a", muted: "#2454a6" },
     { words: ["verde"], background: "#eafaf5", border: "#b7ead8", text: "#086044", muted: "#127456" },
     { words: ["giallo", "gialla"], background: "#fff9db", border: "#fde68a", text: "#7a4b00", muted: "#936400" },
     { words: ["viola", "lilla"], background: "#f5f0ff", border: "#d8c7ff", text: "#58329b", muted: "#6941c6" },
