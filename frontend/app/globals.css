@@ -2209,6 +2209,20 @@ h3 {
   color: var(--blue);
 }
 
+.match-add-dock {
+  position: sticky;
+  bottom: 86px;
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.match-add-dock .button {
+  box-shadow: 0 14px 34px rgba(21, 66, 127, 0.22);
+  pointer-events: auto;
+}
+
 .program-editor {
   display: grid;
   gap: 12px;
@@ -2376,6 +2390,15 @@ h3 {
     bottom: 12px;
     left: 12px;
     justify-content: space-between;
+  }
+
+  .match-add-dock {
+    bottom: 78px;
+    justify-content: stretch;
+  }
+
+  .match-add-dock .button {
+    width: 100%;
   }
 
   .hero {

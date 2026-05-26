@@ -503,6 +503,9 @@ function MatchesEditor({ event, onChange, section }: EditorProps & { section: Ev
           </div>
         ))}
       </div>
+      <div className="match-add-dock">
+        <button className="button" type="button" onClick={addMatch}><CalendarPlus size={17} /> Aggiungi partita</button>
+      </div>
     </div>
   );
 }
