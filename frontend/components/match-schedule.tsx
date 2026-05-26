@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Search, Trophy } from "lucide-react";
 import type { Match, MatchStatus } from "@/lib/types";
+import type { CSSProperties } from "react";
 
 const statusLabels: Record<MatchStatus, string> = {
   scheduled: "In programma",
@@ -80,33 +81,45 @@ export function MatchSchedule({ matches }: { matches: Match[] }) {
       {matches.length > 0 && filteredMatches.length === 0 ? <div className="empty">Nessuna partita trovata.</div> : null}
 
       <div className="schedule-groups">
-        {groupedMatches.map(([girone, items]) => (
-          <section className="schedule-group" key={girone}>
-            <div className="schedule-group-header">
-              <span><Trophy size={15} /> {girone}</span>
-              <small>{items.length} {items.length === 1 ? "partita" : "partite"}</small>
-            </div>
-            <div className="schedule-match-list">
-              {items.map((match) => (
-                <article className="schedule-match-card" key={match.id}>
-                  <div className="schedule-match-main">
-                    <strong>{match.homeTeam} - {match.awayTeam}</strong>
-                    <div className="match-meta">
-                      <span><CalendarDays size={14} /> {formatDate(match.startsAt)}</span>
-                      <span><MapPin size={14} /> {match.court}</span>
+        {groupedMatches.map(([girone, items]) => {
+          const colors = getGironeColors(girone);
+
+          return (
+            <section className="schedule-group" key={girone}>
+              <div
+                className="schedule-group-header"
+                style={{
+                  "--girone-bg": colors.background,
+                  "--girone-border": colors.border,
+                  "--girone-color": colors.text,
+                  "--girone-muted": colors.muted
+                } as CSSProperties}
+              >
+                <span><Trophy size={15} /> {girone}</span>
+                <small>{items.length} {items.length === 1 ? "partita" : "partite"}</small>
+              </div>
+              <div className="schedule-match-list">
+                {items.map((match) => (
+                  <article className="schedule-match-card" key={match.id}>
+                    <div className="schedule-match-main">
+                      <strong>{match.homeTeam} - {match.awayTeam}</strong>
+                      <div className="match-meta">
+                        <span><CalendarDays size={14} /> {formatDate(match.startsAt)}</span>
+                        <span><MapPin size={14} /> {match.court}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="schedule-match-side">
-                    <div className="schedule-match-score">{match.homeScore ?? "-"}:{match.awayScore ?? "-"}</div>
-                    <span className={`status ${match.status === "live" ? "live" : match.status === "finished" ? "done" : ""}`}>
-                      {statusLabels[match.status]}
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        ))}
+                    <div className="schedule-match-side">
+                      <div className="schedule-match-score">{match.homeScore ?? "-"}:{match.awayScore ?? "-"}</div>
+                      <span className={`status ${match.status === "live" ? "live" : match.status === "finished" ? "done" : ""}`}>
+                        {statusLabels[match.status]}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
 
       {filteredMatches.length > pageSize ? (
@@ -137,6 +150,33 @@ function groupByGirone(matches: Match[]) {
 
 function getGironeLabel(match: Match) {
   return match.category?.trim() || "Senza girone";
+}
+
+function getGironeColors(label: string) {
+  const normalized = label
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const colorOptions = [
+    { words: ["arancio", "arancione"], background: "#fff3e6", border: "#ffd7a8", text: "#8a3f00", muted: "#9a5b00" },
+    { words: ["rosso", "rossa"], background: "#fff1f3", border: "#fecdd6", text: "#a31717", muted: "#b42318" },
+    { words: ["blu", "azzurro", "azzurra"], background: "#eaf4ff", border: "#bfdcff", text: "#15427f", muted: "#24589c" },
+    { words: ["verde"], background: "#eafaf5", border: "#b7ead8", text: "#086044", muted: "#127456" },
+    { words: ["giallo", "gialla"], background: "#fff9db", border: "#fde68a", text: "#7a4b00", muted: "#936400" },
+    { words: ["viola", "lilla"], background: "#f5f0ff", border: "#d8c7ff", text: "#58329b", muted: "#6941c6" },
+    { words: ["rosa"], background: "#fff0f6", border: "#fbcfe8", text: "#9d174d", muted: "#be185d" },
+    { words: ["bianco", "bianca"], background: "#f8fafc", border: "#d7e2f1", text: "#344054", muted: "#667085" },
+    { words: ["nero", "nera"], background: "#eef2f6", border: "#cfd7e3", text: "#1d2939", muted: "#475467" },
+    { words: ["grigio", "grigia"], background: "#f2f4f7", border: "#d0d5dd", text: "#344054", muted: "#667085" }
+  ];
+
+  return colorOptions.find((option) => option.words.some((word) => normalized.includes(word))) || {
+    background: "#eaf4ff",
+    border: "#bfdcff",
+    text: "#15427f",
+    muted: "#475467"
+  };
 }
 
 function formatDate(value: string) {

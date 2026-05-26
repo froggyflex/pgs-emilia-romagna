@@ -1204,9 +1204,10 @@ h3 {
   justify-content: space-between;
   gap: 10px;
   padding: 8px 10px;
+  border: 1px solid var(--girone-border, #bfdcff);
   border-radius: 8px;
-  background: #eaf4ff;
-  color: var(--blue);
+  background: var(--girone-bg, #eaf4ff);
+  color: var(--girone-color, var(--blue));
   font-weight: 900;
 }
 
@@ -1217,7 +1218,7 @@ h3 {
 }
 
 .schedule-group-header small {
-  color: #475467;
+  color: var(--girone-muted, #475467);
   font-weight: 800;
 }
 
