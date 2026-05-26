@@ -413,6 +413,16 @@ function DetailsEditor({ event, onChange }: EditorProps) {
 
 function MatchesEditor({ event, onChange, section }: EditorProps & { section: EventSection }) {
   const matches = getMatchesForSection(event, section);
+  const matchRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const pendingScrollMatchIdRef = useRef("");
+
+  useEffect(() => {
+    const matchId = pendingScrollMatchIdRef.current;
+    if (!matchId) return;
+
+    pendingScrollMatchIdRef.current = "";
+    matchRefs.current[matchId]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [matches]);
 
   function addMatch() {
     const match: Match = {
@@ -425,6 +435,8 @@ function MatchesEditor({ event, onChange, section }: EditorProps & { section: Ev
       startsAt: new Date().toISOString(),
       status: "scheduled"
     };
+
+    pendingScrollMatchIdRef.current = match.id;
     onChange({ ...event, matches: [...event.matches, match] });
   }
 
@@ -452,7 +464,13 @@ function MatchesEditor({ event, onChange, section }: EditorProps & { section: Ev
       <div className="stack">
         {matches.length === 0 ? <div className="empty">Nessuna partita inserita per questo campionato.</div> : null}
         {matches.map((match) => (
-          <div className={`editor-item match-editor-card status-card-${match.status}`} key={match.id}>
+          <div
+            className={`editor-item match-editor-card status-card-${match.status}`}
+            key={match.id}
+            ref={(node) => {
+              matchRefs.current[match.id] = node;
+            }}
+          >
             <div className="item-toolbar">
               <div>
                 <span className={`status ${match.status === "live" ? "live" : match.status === "finished" ? "done" : ""}`}>
