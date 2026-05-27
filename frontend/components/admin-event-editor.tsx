@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
+  BarChart3,
   CalendarPlus,
   ChevronLeft,
   ChevronRight,
@@ -19,8 +20,9 @@ import {
   Trash2
 } from "lucide-react";
 import type { Comment, EventField, EventRecord, EventSection, EventSectionType, EventStatus, FeedPost, Match, MediaItem, ProgramItem, RankingRow } from "@/lib/types";
+import { AnalyticsDashboard } from "./analytics-dashboard";
 
-type Tab = "details" | "sections" | "fields" | "rankings" | "media" | "feed";
+type Tab = "details" | "sections" | "fields" | "rankings" | "media" | "feed" | "analytics";
 type SaveMessage = { type: "success" | "error" | "info"; text: string } | null;
 
 const statusLabels: Record<EventStatus, string> = {
@@ -144,6 +146,7 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
           <button className={`side-tab ${tab === "rankings" ? "active" : ""}`} type="button" onClick={() => setTab("rankings")}>Classifiche</button>
           <button className={`side-tab ${tab === "media" ? "active" : ""}`} type="button" onClick={() => setTab("media")}>Foto e video</button>
           <button className={`side-tab ${tab === "feed" ? "active" : ""}`} type="button" onClick={() => setTab("feed")}>Feed live</button>
+          <button className={`side-tab ${tab === "analytics" ? "active" : ""}`} type="button" onClick={() => setTab("analytics")}><BarChart3 size={15} /> Statistiche</button>
         </aside>
 
         <div className="editor-panel">
@@ -153,6 +156,7 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
           {tab === "rankings" ? <RankingsEditor event={event} onChange={updateEvent} /> : null}
           {tab === "media" ? <MediaEditor event={event} onChange={updateEvent} comments={comments} /> : null}
           {tab === "feed" ? <FeedEditor event={event} onChange={updateEvent} /> : null}
+          {tab === "analytics" ? <AnalyticsDashboard eventSlug={event.slug} /> : null}
         </div>
       </section>
     </>

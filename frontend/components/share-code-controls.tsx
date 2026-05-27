@@ -14,7 +14,7 @@ export function ShareCodeControls({ url, qrDataUrl, fileName }: { url: string; q
 
   async function shareLink() {
     if (navigator.share) {
-      await navigator.share({ title: "PGS Eventi Live", url });
+      await navigator.share({ title: "PGS Eventi Live", text: "Apri evento PGS Eventi Live", url });
       return;
     }
 

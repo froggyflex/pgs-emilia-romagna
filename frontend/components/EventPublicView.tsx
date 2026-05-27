@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { ArrowLeft, CalendarDays, MapPin, MessageCircle, PartyPopper, Radio, RefreshCw, Trophy, Video } from "lucide-react";
-import type { Comment, EventRecord, EventSection, RankingRow } from "@/lib/types";
+import type { Comment, EventRecord, EventSection, FeedPost, RankingRow } from "@/lib/types";
+import { getPublicBaseUrl } from "@/lib/public-url";
 import { CommentBox } from "./comment-box";
 import { MainEventSoundtrack } from "./main-event-soundtrack";
 import { MediaCard } from "./media-card";
@@ -46,12 +47,13 @@ export function getEventSections(event: EventRecord): EventSection[] {
 }
 
 export async function EventPublicView({ event }: { event: EventRecord }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eventilive.pgsemiliaromagna.org";
+  const siteUrl = await getPublicBaseUrl();
   const eventUrl = `${siteUrl}/events/${event.slug}`;
   const qrDataUrl = await QRCode.toDataURL(eventUrl, { margin: 1, width: 220 });
   const sections = getEventSections(event);
   const liveMatches = event.matches.filter((match) => match.status === "live").length;
   const programItems = sections.reduce((total, section) => total + (section.programItems?.length || 0), 0);
+  const latestFeed = getLatestFeed(event.feed);
   const hasSoundtrack = isDonBoscoCupEvent(event);
 
   return (
@@ -86,6 +88,38 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
         <div className="stat-card"><strong>{liveMatches}</strong><p>Live ora</p></div>
         <div className="stat-card"><strong>{programItems}</strong><p>Punti programma</p></div>
       </section>
+
+      {latestFeed.length > 0 ? (
+        <section className="section main-feed-section">
+          <div className="public-section-heading">
+            <div>
+              <span className="small-label">Ultimi aggiornamenti</span>
+              <h2>Feed della manifestazione</h2>
+              <p className="muted">Le comunicazioni piu recenti pubblicate dagli operatori.</p>
+            </div>
+          </div>
+          <div className="main-feed-list">
+            {latestFeed.map((post) => {
+              const section = sections.find((item) => item.id === post.sectionId);
+              const href = section ? `/events/${event.slug}/${section.slug}#feed` : `/events/${event.slug}`;
+
+              return (
+                <Link className="main-feed-card" href={href} key={post.id}>
+                  <div className="feed-item-header">
+                    <strong>{post.title}</strong>
+                    <span className="status">{post.type}</span>
+                  </div>
+                  <p className="formatted-description">{post.body}</p>
+                  <div className="main-feed-meta">
+                    <span><CalendarDays size={14} /> {formatDate(post.createdAt)}</span>
+                    {section ? <span>{section.title}</span> : <span>Manifestazione</span>}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <section className="section internal-events-section" id="eventi-interni">
         <div className="public-section-heading">
@@ -122,6 +156,7 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
           <p className="muted">Porta il pubblico alla pagina principale, da cui potra scegliere il singolo evento da seguire.</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrDataUrl} width={220} height={220} alt="QR code manifestazione" />
+          <p className="share-code-url">{eventUrl}</p>
           <ShareCodeControls url={eventUrl} qrDataUrl={qrDataUrl} fileName={`${event.slug}-qr.png`} />
         </div>
       </section>
@@ -162,7 +197,7 @@ async function ChampionshipEventView({
   mediaComments: Record<string, Comment[]>;
   viewerAuthenticated: boolean;
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eventilive.pgsemiliaromagna.org";
+  const siteUrl = await getPublicBaseUrl();
   const sectionUrl = `${siteUrl}/events/${event.slug}/${section.slug}`;
   const qrDataUrl = await QRCode.toDataURL(sectionUrl, { margin: 1, width: 220 });
   const matches = getSectionItems(event.matches, section, getFirstCampionatoId(event));
@@ -229,6 +264,7 @@ async function ChampionshipEventView({
         <div className="quick-access-actions">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrDataUrl} width={96} height={96} alt="QR code evento" />
+          <span className="share-code-url compact">{sectionUrl}</span>
           <ShareCodeControls url={sectionUrl} qrDataUrl={qrDataUrl} fileName={`${event.slug}-${section.slug}-qr.png`} />
         </div>
       </section>
@@ -472,6 +508,12 @@ function getRankingCell(row: RankingRow, column: string) {
   };
 
   return fallback[column] ?? "";
+}
+
+function getLatestFeed(feed: FeedPost[]) {
+  return [...feed]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 4);
 }
 
 function formatDate(value: string) {

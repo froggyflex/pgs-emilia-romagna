@@ -18,7 +18,8 @@ import {
   listEvents,
   upsertEvent
 } from "./events-store.mjs";
-import { commentSchema, eventSchema } from "./validators.mjs";
+import { getAnalyticsSummary, recordVisit } from "./analytics-store.mjs";
+import { commentSchema, eventSchema, visitSchema } from "./validators.mjs";
 
 const port = Number(process.env.PORT || 8787);
 const uploadsDir = path.resolve("uploads");
@@ -47,6 +48,31 @@ createServer(async (request, response) => {
 
     if (request.method === "GET" && url.pathname === "/api/health") {
       sendJson(response, 200, { ok: true, service: "pgs-eventi-live-backend" });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/analytics") {
+      if (!requireTrustedWrite(request, response)) return;
+      const eventSlug = url.searchParams.get("eventSlug") || "";
+
+      if (!eventSlug) {
+        sendJson(response, 400, { message: "Missing eventSlug" });
+        return;
+      }
+
+      sendJson(response, 200, await getAnalyticsSummary(eventSlug));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/analytics/visit") {
+      const parsed = visitSchema.safeParse(await readJson(request));
+
+      if (!parsed.success) {
+        sendJson(response, 400, { message: "Invalid visit" });
+        return;
+      }
+
+      sendJson(response, 200, await recordVisit(parsed.data));
       return;
     }
 

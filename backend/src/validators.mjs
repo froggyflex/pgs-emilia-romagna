@@ -36,3 +36,14 @@ export const commentSchema = z.object({
   authorEmail: z.string().email().optional(),
   authorImage: z.string().optional()
 });
+
+export const visitSchema = z.object({
+  eventSlug: z.string().min(1),
+  sectionSlug: z.string().optional().or(z.literal("")),
+  path: z.string().min(1),
+  referrer: z.string().optional().or(z.literal("")),
+  country: z.string().optional().or(z.literal("")),
+  region: z.string().optional().or(z.literal("")),
+  city: z.string().optional().or(z.literal("")),
+  userAgent: z.string().optional().or(z.literal(""))
+});

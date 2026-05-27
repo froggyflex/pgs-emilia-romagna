@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "node --watch src/server.mjs",
     "start": "node src/server.mjs",
-    "build": "node --check src/server.mjs && node --check src/events-store.mjs",
+    "build": "node --check src/server.mjs && node --check src/events-store.mjs && node --check src/analytics-store.mjs",
     "db:setup": "node scripts/setup-atlas.mjs",
     "db:seed": "node scripts/setup-atlas.mjs --seed"
   },

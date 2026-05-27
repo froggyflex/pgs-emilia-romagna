@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { EventPublicView, EventUnavailableView } from "@/components/EventPublicView";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { getEventBySlug } from "@/lib/backend-api";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
     <main className="shell">
       <SiteHeader />
       <div className="page">
+        <AnalyticsTracker eventSlug={event.slug} />
         {event.status === "updating" ? <EventUnavailableView event={event} /> : <EventPublicView event={event} />}
       </div>
     </main>

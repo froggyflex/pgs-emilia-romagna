@@ -86,6 +86,30 @@ async function ensureCollections(db) {
       validationLevel: "moderate"
     });
   }
+
+  if (!names.has("analytics_visits")) {
+    await db.createCollection("analytics_visits", {
+      validator: {
+        $jsonSchema: {
+          bsonType: "object",
+          required: ["eventSlug", "path", "country", "device", "createdAt"],
+          properties: {
+            eventSlug: { bsonType: "string" },
+            sectionSlug: { bsonType: "string" },
+            path: { bsonType: "string" },
+            referrer: { bsonType: "string" },
+            country: { bsonType: "string" },
+            region: { bsonType: "string" },
+            city: { bsonType: "string" },
+            device: { bsonType: "string" },
+            userAgent: { bsonType: "string" },
+            createdAt: { bsonType: "string" }
+          }
+        }
+      },
+      validationLevel: "moderate"
+    });
+  }
 }
 
 async function ensureIndexes(db) {
@@ -99,6 +123,15 @@ async function ensureIndexes(db) {
     { name: "comments_by_target" }
   );
   await db.collection("comments").createIndex({ eventId: 1, createdAt: -1 }, { name: "comments_by_event" });
+
+  await db.collection("analytics_visits").createIndex(
+    { eventSlug: 1, createdAt: -1 },
+    { name: "analytics_by_event_date" }
+  );
+  await db.collection("analytics_visits").createIndex(
+    { eventSlug: 1, country: 1 },
+    { name: "analytics_by_event_country" }
+  );
 }
 
 async function seedDatabase(db) {

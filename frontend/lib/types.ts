@@ -133,3 +133,32 @@ export type EventRecord = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type AnalyticsCount = {
+  label: string;
+  count: number;
+  percent: number;
+};
+
+export type RecentVisit = {
+  id: string;
+  path: string;
+  country: string;
+  region?: string;
+  city?: string;
+  device: string;
+  createdAt: string;
+};
+
+export type AnalyticsSummary = {
+  totalVisits: number;
+  visitsToday: number;
+  visitsLast7Days: number;
+  generatedAt: string;
+  countries: AnalyticsCount[];
+  regions: AnalyticsCount[];
+  cities: AnalyticsCount[];
+  paths: AnalyticsCount[];
+  devices: AnalyticsCount[];
+  recent: RecentVisit[];
+};
