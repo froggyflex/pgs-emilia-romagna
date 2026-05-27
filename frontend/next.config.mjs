@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/events/finali-femminili-pallavolo",
+        destination: "/events/don-bosco-cup-2026",
+        permanent: true
+      }
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**" },
