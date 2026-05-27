@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   CalendarPlus,
@@ -21,7 +21,7 @@ import {
 import type { Comment, EventField, EventRecord, EventSection, EventSectionType, EventStatus, FeedPost, Match, MediaItem, ProgramItem, RankingRow } from "@/lib/types";
 
 type Tab = "details" | "sections" | "fields" | "rankings" | "media" | "feed";
-type SaveMessage = { type: "success" | "error"; text: string } | null;
+type SaveMessage = { type: "success" | "error" | "info"; text: string } | null;
 
 const statusLabels: Record<EventStatus, string> = {
   draft: "Bozza",
@@ -33,9 +33,12 @@ const statusLabels: Record<EventStatus, string> = {
 export function AdminEventEditor({ event: initialEvent, comments }: { event: EventRecord; comments: Comment[] }) {
   const [event, setEventState] = useState(() => normalizeEventSections(initialEvent));
   const eventRef = useRef(event);
+  const editVersionRef = useRef(0);
+  const activeSaveRef = useRef(0);
+  const savingRef = useRef(false);
   const [tab, setTab] = useState<Tab>("details");
   const [message, setMessage] = useState<SaveMessage>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     eventRef.current = event;
@@ -48,37 +51,67 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
   }, [message]);
 
   function updateEvent(nextEvent: EventRecord) {
+    editVersionRef.current += 1;
     eventRef.current = nextEvent;
     setEventState(nextEvent);
     setMessage(null);
   }
 
-  function save() {
-    startTransition(async () => {
-      setMessage(null);
+  async function save() {
+    if (savingRef.current) return;
 
-      try {
-        const response = await fetch("/api/events", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(eventRef.current)
-        });
+    const saveId = activeSaveRef.current + 1;
+    const savedEditVersion = editVersionRef.current;
+    const snapshot = eventRef.current;
+    savingRef.current = true;
+    activeSaveRef.current = saveId;
+    setIsSaving(true);
+    setMessage({ type: "info", text: "Salvataggio..." });
 
-        const payload = await response.json().catch(() => null);
+    try {
+      const response = await fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snapshot)
+      });
 
-        if (!response.ok || !payload?.slug) {
-          setMessage({ type: "error", text: payload?.message || "Salvataggio non riuscito." });
-          return;
-        }
+      const payload = await response.json().catch(() => null);
 
-        const saved = normalizeEventSections(payload as EventRecord);
+      if (activeSaveRef.current !== saveId) return;
+
+      if (!response.ok || !payload?.slug) {
+        setMessage({ type: "error", text: payload?.message || "Salvataggio non riuscito." });
+        return;
+      }
+
+      const saved = normalizeEventSections(payload as EventRecord);
+
+      if (editVersionRef.current === savedEditVersion) {
         eventRef.current = saved;
         setEventState(saved);
         setMessage({ type: "success", text: "Salvato." });
-      } catch {
+        return;
+      }
+
+      const currentWithSaveMetadata = {
+        ...eventRef.current,
+        _id: saved._id,
+        createdAt: saved.createdAt,
+        updatedAt: saved.updatedAt
+      };
+      eventRef.current = currentWithSaveMetadata;
+      setEventState(currentWithSaveMetadata);
+      setMessage({ type: "error", text: "Alcune modifiche sono successive al salvataggio. Premi Salva di nuovo." });
+    } catch {
+      if (activeSaveRef.current === saveId) {
         setMessage({ type: "error", text: "Salvataggio non riuscito." });
       }
-    });
+    } finally {
+      if (activeSaveRef.current === saveId) {
+        savingRef.current = false;
+        setIsSaving(false);
+      }
+    }
   }
 
   return (
@@ -93,14 +126,14 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
           </div>
         </div>
         <div className="editor-actions">
-          {message ? <span className={`status ${message.type === "success" ? "done" : "error"}`}>{message.text}</span> : null}
+          {message ? <span className={`status ${message.type === "success" ? "done" : message.type === "error" ? "error" : ""}`}>{message.text}</span> : null}
           <Link className="ghost-button" href={`/events/${event.slug}`}><Eye size={17} /> Pubblico</Link>
-          <button className="button" type="button" onClick={save} disabled={isPending}><Save size={17} /> Salva</button>
+          <button className="button" type="button" onClick={save} disabled={isSaving}><Save size={17} /> {isSaving ? "Salvataggio..." : "Salva"}</button>
         </div>
       </section>
       <div className="editor-save-dock">
-        {message ? <span className={`status ${message.type === "success" ? "done" : "error"}`}>{message.text}</span> : null}
-        <button className="button" type="button" onClick={save} disabled={isPending}><Save size={17} /> Salva</button>
+        {message ? <span className={`status ${message.type === "success" ? "done" : message.type === "error" ? "error" : ""}`}>{message.text}</span> : null}
+        <button className="button" type="button" onClick={save} disabled={isSaving}><Save size={17} /> {isSaving ? "Salvataggio..." : "Salva"}</button>
       </div>
 
       <section className="editor-layout">

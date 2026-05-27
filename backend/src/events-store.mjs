@@ -88,13 +88,20 @@ export async function upsertEvent(event) {
 
   if (event._id) {
     const { _id, ...rest } = payload;
-    const result = await db.collection(EVENTS).updateOne({ _id: new ObjectId(_id) }, { $set: rest });
+    const objectId = new ObjectId(_id);
+    const current = await db.collection(EVENTS).findOne({ _id: objectId });
 
-    if (result.matchedCount === 0) {
+    if (!current) {
       throw new Error(`Event not found for update: ${_id}`);
     }
 
-    const saved = await db.collection(EVENTS).findOne({ _id: new ObjectId(_id) });
+    if (event.updatedAt && current.updatedAt && event.updatedAt !== current.updatedAt) {
+      throw httpError(409, "Evento modificato da un altro salvataggio. Ricarica la pagina prima di salvare di nuovo.");
+    }
+
+    await db.collection(EVENTS).updateOne({ _id: objectId }, { $set: rest });
+
+    const saved = await db.collection(EVENTS).findOne({ _id: objectId });
     if (!saved) {
       throw new Error(`Event update could not be verified: ${_id}`);
     }
@@ -237,4 +244,10 @@ function serializeEvent(event) {
 function serializeComment(comment) {
   const { _id, ...rest } = comment;
   return { ...rest, id: rest.id || _id?.toString() };
+}
+
+function httpError(status, message) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
 }
