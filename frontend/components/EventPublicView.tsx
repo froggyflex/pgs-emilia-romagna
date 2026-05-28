@@ -206,7 +206,7 @@ async function ChampionshipEventView({
   const feed = getSectionItems(event.feed, section, getFirstCampionatoId(event));
   const liveMatch = matches.find((match) => match.status === "live");
   const rankingColumns = getRankingColumns(event, rankings);
-  const streamUrl = liveMatch?.streamUrl || event.streamUrl;
+  const streamUrl = normalizeStreamingUrl(liveMatch?.streamUrl || event.streamUrl);
   const totalMediaComments = Object.values(mediaComments).reduce((total, items) => total + items.length, 0);
 
   return (
@@ -514,6 +514,79 @@ function getLatestFeed(feed: FeedPost[]) {
   return [...feed]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4);
+}
+
+function normalizeStreamingUrl(value?: string): string {
+  const rawUrl = value?.trim();
+  if (!rawUrl) return "";
+
+  try {
+    const url = new URL(rawUrl);
+    const host = url.hostname.replace(/^www\./, "");
+
+    if (host === "consent.youtube.com") {
+      const continuedUrl = url.searchParams.get("continue") || url.searchParams.get("continue_url");
+      return continuedUrl ? normalizeStreamingUrl(continuedUrl) : rawUrl;
+    }
+
+    if (host === "youtu.be") {
+      const videoId = url.pathname.split("/").filter(Boolean)[0];
+      return videoId ? youtubeEmbedUrl(videoId, url.searchParams) : rawUrl;
+    }
+
+    if (host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com") {
+      const pathParts = url.pathname.split("/").filter(Boolean);
+
+      if (pathParts[0] === "embed" && pathParts[1] === "live_stream") {
+        return `https://www.youtube-nocookie.com/embed/live_stream?${url.searchParams.toString()}`;
+      }
+
+      if (pathParts[0] === "embed" && pathParts[1]) {
+        return youtubeEmbedUrl(pathParts[1], url.searchParams);
+      }
+
+      if (pathParts[0] === "live" && pathParts[1]) {
+        return youtubeEmbedUrl(pathParts[1], url.searchParams);
+      }
+
+      if (pathParts[0] === "shorts" && pathParts[1]) {
+        return youtubeEmbedUrl(pathParts[1], url.searchParams);
+      }
+
+      const videoId = url.searchParams.get("v");
+      if (videoId) return youtubeEmbedUrl(videoId, url.searchParams);
+    }
+
+    return rawUrl;
+  } catch {
+    return rawUrl;
+  }
+}
+
+function youtubeEmbedUrl(videoId: string, params: URLSearchParams): string {
+  const embedParams = new URLSearchParams();
+  const start = params.get("start") || secondsFromTimestamp(params.get("t") || "");
+  const list = params.get("list");
+
+  if (start) embedParams.set("start", start);
+  if (list) embedParams.set("list", list);
+
+  const query = embedParams.toString();
+  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}${query ? `?${query}` : ""}`;
+}
+
+function secondsFromTimestamp(value: string): string {
+  if (!value) return "";
+  if (/^\d+$/.test(value)) return value;
+
+  const match = value.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/);
+  if (!match) return "";
+
+  const hours = Number(match[1] || 0);
+  const minutes = Number(match[2] || 0);
+  const seconds = Number(match[3] || 0);
+  const total = hours * 3600 + minutes * 60 + seconds;
+  return total > 0 ? String(total) : "";
 }
 
 function formatDate(value: string) {
