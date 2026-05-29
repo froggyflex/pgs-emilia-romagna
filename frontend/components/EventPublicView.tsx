@@ -206,7 +206,9 @@ async function ChampionshipEventView({
   const feed = getSectionItems(event.feed, section, getFirstCampionatoId(event));
   const liveMatch = matches.find((match) => match.status === "live");
   const rankingColumns = getRankingColumns(event, rankings);
-  const streamUrl = normalizeStreamingUrl(liveMatch?.streamUrl || event.streamUrl);
+  const rawStreamUrl = liveMatch?.streamUrl || event.streamUrl;
+  const streamUrl = normalizeStreamingUrl(rawStreamUrl);
+  const streamWatchUrl = getStreamingWatchUrl(rawStreamUrl, streamUrl);
   const totalMediaComments = Object.values(mediaComments).reduce((total, items) => total + items.length, 0);
 
   return (
@@ -294,7 +296,12 @@ async function ChampionshipEventView({
               </div>
               <span className="status live">Diretta</span>
             </div>
-            <iframe className="embed" src={streamUrl} title="Streaming live" allowFullScreen />
+            <iframe className="embed" src={streamUrl} title="Streaming live" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+            {streamWatchUrl ? (
+              <p className="stream-fallback">
+                Se il player non carica, <a href={streamWatchUrl} target="_blank" rel="noreferrer">apri la diretta su YouTube</a>.
+              </p>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -538,7 +545,7 @@ function normalizeStreamingUrl(value?: string): string {
       const pathParts = url.pathname.split("/").filter(Boolean);
 
       if (pathParts[0] === "embed" && pathParts[1] === "live_stream") {
-        return `https://www.youtube-nocookie.com/embed/live_stream?${url.searchParams.toString()}`;
+        return `https://www.youtube.com/embed/live_stream?${url.searchParams.toString()}`;
       }
 
       if (pathParts[0] === "embed" && pathParts[1]) {
@@ -572,7 +579,7 @@ function youtubeEmbedUrl(videoId: string, params: URLSearchParams): string {
   if (list) embedParams.set("list", list);
 
   const query = embedParams.toString();
-  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}${query ? `?${query}` : ""}`;
+  return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}${query ? `?${query}` : ""}`;
 }
 
 function secondsFromTimestamp(value: string): string {
@@ -587,6 +594,47 @@ function secondsFromTimestamp(value: string): string {
   const seconds = Number(match[3] || 0);
   const total = hours * 3600 + minutes * 60 + seconds;
   return total > 0 ? String(total) : "";
+}
+
+function getStreamingWatchUrl(rawValue?: string, embedUrl?: string): string {
+  const rawUrl = rawValue?.trim();
+
+  if (rawUrl) {
+    try {
+      const url = new URL(rawUrl);
+      const host = url.hostname.replace(/^www\./, "");
+
+      if (host === "consent.youtube.com") {
+        const continuedUrl = url.searchParams.get("continue") || url.searchParams.get("continue_url");
+        return continuedUrl ? getStreamingWatchUrl(continuedUrl, embedUrl) : rawUrl;
+      }
+
+      if (host === "youtube.com" || host === "m.youtube.com" || host === "youtu.be") {
+        return rawUrl;
+      }
+    } catch {
+      return rawUrl;
+    }
+  }
+
+  if (!embedUrl) return "";
+
+  try {
+    const url = new URL(embedUrl);
+    const pathParts = url.pathname.split("/").filter(Boolean);
+
+    if (pathParts[0] === "embed" && pathParts[1] && pathParts[1] !== "live_stream") {
+      return `https://www.youtube.com/watch?v=${encodeURIComponent(pathParts[1])}`;
+    }
+
+    if (pathParts[0] === "embed" && pathParts[1] === "live_stream" && url.searchParams.get("channel")) {
+      return `https://www.youtube.com/channel/${encodeURIComponent(url.searchParams.get("channel") || "")}/live`;
+    }
+  } catch {
+    return "";
+  }
+
+  return embedUrl;
 }
 
 function formatDate(value: string) {
