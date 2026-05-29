@@ -203,6 +203,7 @@ function SectionsEditor({ event, onChange }: EditorProps) {
       endsAt: event.endsAt,
       location: event.location,
       heroImage: event.coverImage,
+      streamUrl: "",
       programItems: type === "intrattenimento" ? [] : undefined
     };
 
@@ -377,6 +378,7 @@ function SectionsEditor({ event, onChange }: EditorProps) {
               <Input label="Inizio" type="datetime-local" value={toLocalInput(activeSection.startsAt || event.startsAt)} onChange={(startsAt) => patchSection(activeSection.id, { startsAt: toIso(startsAt) })} />
               <Input label="Fine" type="datetime-local" value={toLocalInput(activeSection.endsAt || event.endsAt)} onChange={(endsAt) => patchSection(activeSection.id, { endsAt: toIso(endsAt) })} />
               <Input label="Sottotitolo" value={activeSection.subtitle || ""} onChange={(subtitle) => patchSection(activeSection.id, { subtitle })} full />
+              <Input label="Streaming evento interno" value={activeSection.streamUrl || ""} onChange={(streamUrl) => patchSection(activeSection.id, { streamUrl })} full />
               <AssetInput label="Immagine hero / sfondo" value={activeSection.heroImage || ""} onChange={(heroImage) => patchSection(activeSection.id, { heroImage })} full />
               <label className="field full">
                 <span>Descrizione</span>
@@ -1098,7 +1100,8 @@ function getEditableSections(event: EventRecord): EventSection[] {
       startsAt: event.startsAt,
       endsAt: event.endsAt,
       location: event.location,
-      heroImage: event.coverImage
+      heroImage: event.coverImage,
+      streamUrl: ""
     }
   ];
 }

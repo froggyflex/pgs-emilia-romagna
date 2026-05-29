@@ -23,6 +23,7 @@ export type EventSection = {
   endsAt?: string;
   location?: string;
   heroImage?: string;
+  streamUrl?: string;
   programItems?: ProgramItem[];
 };
 

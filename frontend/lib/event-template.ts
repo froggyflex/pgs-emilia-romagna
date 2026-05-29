@@ -27,7 +27,8 @@ export function createDraftEvent(): EventRecord {
         startsAt: now,
         endsAt: now,
         location: "Luogo evento",
-        heroImage: "/assets/finali-nazionali-u14-u16.jpeg"
+        heroImage: "/assets/finali-nazionali-u14-u16.jpeg",
+        streamUrl: ""
       }
     ],
     categories: ["Under 14", "Under 16"],

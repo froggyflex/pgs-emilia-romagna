@@ -26,7 +26,8 @@ export const seedEvent: EventRecord = {
       startsAt: "2026-05-28T09:00:00.000Z",
       endsAt: "2026-05-31T18:00:00.000Z",
       location: "Palazzetti e campi gara di Cesenatico",
-      heroImage: "/assets/finali-nazionali-u14-u16.jpeg"
+      heroImage: "/assets/finali-nazionali-u14-u16.jpeg",
+      streamUrl: ""
     },
     {
       id: "section-serata-inaugurale",
@@ -39,6 +40,7 @@ export const seedEvent: EventRecord = {
       endsAt: "2026-05-28T22:30:00.000Z",
       location: "Piazza centrale evento",
       heroImage: "/assets/finali-nazionali-u14-u16.jpeg",
+      streamUrl: "",
       programItems: [
         { id: "program-1", time: "18:30", title: "Accoglienza squadre", description: "Arrivo delegazioni e apertura area evento.", location: "Ingresso principale" },
         { id: "program-2", time: "19:15", title: "Presentazione ufficiale", description: "Sfilata delle squadre e saluto degli organizzatori.", location: "Palco centrale" },

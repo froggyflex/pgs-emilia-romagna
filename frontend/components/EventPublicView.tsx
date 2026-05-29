@@ -41,7 +41,8 @@ export function getEventSections(event: EventRecord): EventSection[] {
       startsAt: event.startsAt,
       endsAt: event.endsAt,
       location: event.location,
-      heroImage: event.coverImage
+      heroImage: event.coverImage,
+      streamUrl: ""
     }
   ];
 }
@@ -54,6 +55,9 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
   const liveMatches = event.matches.filter((match) => match.status === "live").length;
   const programItems = sections.reduce((total, section) => total + (section.programItems?.length || 0), 0);
   const latestFeed = getLatestFeed(event.feed);
+  const rawMainStreamUrl = event.streamUrl;
+  const mainStreamUrl = normalizeStreamingUrl(rawMainStreamUrl);
+  const mainStreamWatchUrl = getStreamingWatchUrl(rawMainStreamUrl, mainStreamUrl);
   const hasSoundtrack = isDonBoscoCupEvent(event);
 
   return (
@@ -67,6 +71,7 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
           <p className="formatted-description">{event.description}</p>
           <div className="hero-actions">
             <a className="button" href="#eventi-interni"><PartyPopper size={18} /> Scegli evento</a>
+            {mainStreamUrl ? <a className="ghost-button" href="#streaming"><Video size={18} /> Diretta TV</a> : null}
             <a className="ghost-button" href="#qr"><CalendarDays size={18} /> QR manifestazione</a>
           </div>
         </div>
@@ -88,6 +93,16 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
         <div className="stat-card"><strong>{liveMatches}</strong><p>Live ora</p></div>
         <div className="stat-card"><strong>{programItems}</strong><p>Punti programma</p></div>
       </section>
+
+      {mainStreamUrl ? (
+        <StreamingPanel
+          id="streaming"
+          title="Streaming TV"
+          text="Diretta principale della manifestazione, visibile anche senza entrare nel singolo campionato."
+          streamUrl={mainStreamUrl}
+          watchUrl={mainStreamWatchUrl}
+        />
+      ) : null}
 
       {latestFeed.length > 0 ? (
         <section className="section main-feed-section">
@@ -206,7 +221,7 @@ async function ChampionshipEventView({
   const feed = getSectionItems(event.feed, section, getFirstCampionatoId(event));
   const liveMatch = matches.find((match) => match.status === "live");
   const rankingColumns = getRankingColumns(event, rankings);
-  const rawStreamUrl = liveMatch?.streamUrl || event.streamUrl;
+  const rawStreamUrl = section.streamUrl || liveMatch?.streamUrl || "";
   const streamUrl = normalizeStreamingUrl(rawStreamUrl);
   const streamWatchUrl = getStreamingWatchUrl(rawStreamUrl, streamUrl);
   const totalMediaComments = Object.values(mediaComments).reduce((total, items) => total + items.length, 0);
@@ -286,24 +301,12 @@ async function ChampionshipEventView({
       </section>
 
       {streamUrl ? (
-        <section className="section card">
-          <div className="card-body">
-            <div className="section-title-row">
-              <div>
-                <span className="small-label">Diretta</span>
-                <h2>Streaming TV</h2>
-                <p className="muted">Il player mostra il canale associato a questo evento o alla partita live.</p>
-              </div>
-              <span className="status live">Diretta</span>
-            </div>
-            <iframe className="embed" src={streamUrl} title="Streaming live" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
-            {streamWatchUrl ? (
-              <p className="stream-fallback">
-                Se il player non carica, <a href={streamWatchUrl} target="_blank" rel="noreferrer">apri la diretta su YouTube</a>.
-              </p>
-            ) : null}
-          </div>
-        </section>
+        <StreamingPanel
+          title="Streaming TV"
+          text="Il player mostra il canale associato a questo evento o alla partita live."
+          streamUrl={streamUrl}
+          watchUrl={streamWatchUrl}
+        />
       ) : null}
 
       <section className="section championship-results-grid">
@@ -402,6 +405,10 @@ function EntertainmentEventView({
   comments: Comment[];
   viewerAuthenticated: boolean;
 }) {
+  const rawStreamUrl = section.streamUrl || "";
+  const streamUrl = normalizeStreamingUrl(rawStreamUrl);
+  const streamWatchUrl = getStreamingWatchUrl(rawStreamUrl, streamUrl);
+
   return (
     <>
       <section className="subevent-topline">
@@ -428,6 +435,15 @@ function EntertainmentEventView({
           </div>
         </div>
       </section>
+
+      {streamUrl ? (
+        <StreamingPanel
+          title="Streaming TV"
+          text="Diretta dedicata a questo evento di intrattenimento."
+          streamUrl={streamUrl}
+          watchUrl={streamWatchUrl}
+        />
+      ) : null}
 
       <section className="section program-showcase">
         <div className="program-panel">
@@ -515,6 +531,41 @@ function getRankingCell(row: RankingRow, column: string) {
   };
 
   return fallback[column] ?? "";
+}
+
+function StreamingPanel({
+  id,
+  title,
+  text,
+  streamUrl,
+  watchUrl
+}: {
+  id?: string;
+  title: string;
+  text: string;
+  streamUrl: string;
+  watchUrl: string;
+}) {
+  return (
+    <section className="section card streaming-section" id={id}>
+      <div className="card-body">
+        <div className="section-title-row">
+          <div>
+            <span className="small-label">Diretta</span>
+            <h2>{title}</h2>
+            <p className="muted">{text}</p>
+          </div>
+          <span className="status live">Diretta</span>
+        </div>
+        <iframe className="embed" src={streamUrl} title="Streaming live" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+        {watchUrl ? (
+          <p className="stream-fallback">
+            Se il player non carica, <a href={watchUrl} target="_blank" rel="noreferrer">apri la diretta su YouTube</a>.
+          </p>
+        ) : null}
+      </div>
+    </section>
+  );
 }
 
 function getLatestFeed(feed: FeedPost[]) {
