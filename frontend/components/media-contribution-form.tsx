@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 
 export function MediaContributionForm({
   eventSlug,
-  viewerAuthenticated
+  viewerIsAdmin
 }: {
   eventSlug: string;
-  viewerAuthenticated: boolean;
+  viewerIsAdmin: boolean;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -37,7 +37,12 @@ export function MediaContributionForm({
       });
 
       if (response.status === 401) {
-        setMessage("Accedi con Google per pubblicare.");
+        setMessage("Accesso admin richiesto.");
+        return;
+      }
+
+      if (response.status === 403) {
+        setMessage("Solo gli amministratori possono pubblicare foto o video.");
         return;
       }
 
@@ -53,8 +58,8 @@ export function MediaContributionForm({
     });
   }
 
-  if (!viewerAuthenticated) {
-    return <div className="community-composer locked"><ImagePlus size={19} /> Accedi con Google per pubblicare foto o video.</div>;
+  if (!viewerIsAdmin) {
+    return null;
   }
 
   return (

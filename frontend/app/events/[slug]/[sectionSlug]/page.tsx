@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { EventSectionPublicView, EventUnavailableView, getEventSections } from "@/components/EventPublicView";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { getEventBySlug, listComments } from "@/lib/backend-api";
-import { safeAuth } from "@/auth";
+import { isAdminEmail, safeAuth } from "@/auth";
 import { isAuthBypassed } from "@/lib/auth-flags";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +48,7 @@ export default async function EventSectionPage({ params }: { params: Promise<{ s
   );
   const session = isAuthBypassed() ? null : await safeAuth();
   const viewerAuthenticated = isAuthBypassed() || Boolean(session?.user?.email);
+  const viewerIsAdmin = isAuthBypassed() || isAdminEmail(session?.user?.email);
 
   return (
     <main className="shell">
@@ -60,6 +61,7 @@ export default async function EventSectionPage({ params }: { params: Promise<{ s
           comments={comments}
           mediaComments={mediaComments}
           viewerAuthenticated={viewerAuthenticated}
+          viewerIsAdmin={viewerIsAdmin}
         />
       </div>
     </main>

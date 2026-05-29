@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { safeAuth } from "@/auth";
+import { isAdminEmail, safeAuth } from "@/auth";
 import { fetchBackend, forwardBackendResponse } from "@/lib/backend-service";
 import { isAuthBypassed } from "@/lib/auth-flags";
 
@@ -11,6 +11,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   if (!bypassAuth && !session?.user?.email) {
     return NextResponse.json({ message: "Sign in required" }, { status: 401 });
+  }
+
+  if (!bypassAuth && !isAdminEmail(session?.user?.email)) {
+    return NextResponse.json({ message: "Admin required" }, { status: 403 });
   }
 
   const { id } = await params;

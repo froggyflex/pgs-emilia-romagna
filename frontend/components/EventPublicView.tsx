@@ -184,18 +184,20 @@ export async function EventSectionPublicView({
   section,
   comments,
   mediaComments,
-  viewerAuthenticated
+  viewerAuthenticated,
+  viewerIsAdmin
 }: {
   event: EventRecord;
   section: EventSection;
   comments: Comment[];
   mediaComments: Record<string, Comment[]>;
   viewerAuthenticated: boolean;
+  viewerIsAdmin: boolean;
 }) {
   return section.type === "intrattenimento" ? (
     <EntertainmentEventView event={event} section={section} comments={comments} viewerAuthenticated={viewerAuthenticated} />
   ) : (
-    <ChampionshipEventView event={event} section={section} comments={comments} mediaComments={mediaComments} viewerAuthenticated={viewerAuthenticated} />
+    <ChampionshipEventView event={event} section={section} comments={comments} mediaComments={mediaComments} viewerAuthenticated={viewerAuthenticated} viewerIsAdmin={viewerIsAdmin} />
   );
 }
 
@@ -204,13 +206,15 @@ async function ChampionshipEventView({
   section,
   comments,
   mediaComments,
-  viewerAuthenticated
+  viewerAuthenticated,
+  viewerIsAdmin
 }: {
   event: EventRecord;
   section: EventSection;
   comments: Comment[];
   mediaComments: Record<string, Comment[]>;
   viewerAuthenticated: boolean;
+  viewerIsAdmin: boolean;
 }) {
   const siteUrl = await getPublicBaseUrl();
   const sectionUrl = `${siteUrl}/events/${event.slug}/${section.slug}`;
@@ -374,7 +378,7 @@ async function ChampionshipEventView({
               <p className="muted">Contenuti commentabili con like e conversazioni dedicate.</p>
             </div>
           </div>
-          <MediaContributionForm eventSlug={event.slug} viewerAuthenticated={viewerAuthenticated} />
+          <MediaContributionForm eventSlug={event.slug} viewerIsAdmin={viewerIsAdmin} />
           <div className="media-grid">
             {media.map((item) => (
               <MediaCard eventId={event.slug} item={item} comments={mediaComments[item.id] || []} viewerAuthenticated={viewerAuthenticated} key={item.id} />
