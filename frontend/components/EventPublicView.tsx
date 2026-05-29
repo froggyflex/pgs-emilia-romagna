@@ -47,7 +47,15 @@ export function getEventSections(event: EventRecord): EventSection[] {
   ];
 }
 
-export async function EventPublicView({ event }: { event: EventRecord }) {
+export async function EventPublicView({
+  event,
+  mediaComments,
+  viewerAuthenticated
+}: {
+  event: EventRecord;
+  mediaComments: Record<string, Comment[]>;
+  viewerAuthenticated: boolean;
+}) {
   const siteUrl = await getPublicBaseUrl();
   const eventUrl = `${siteUrl}/events/${event.slug}`;
   const qrDataUrl = await QRCode.toDataURL(eventUrl, { margin: 1, width: 220 });
@@ -135,6 +143,28 @@ export async function EventPublicView({ event }: { event: EventRecord }) {
           </div>
         </section>
       ) : null}
+
+      <section className="section main-media-section" id="media">
+        <div className="public-section-heading">
+          <div>
+            <span className="small-label">Foto e video</span>
+            <h2>Media della manifestazione</h2>
+            <p className="muted">Contenuti ufficiali caricati dagli amministratori, commentabili e con like.</p>
+          </div>
+        </div>
+        {event.media.length === 0 ? <div className="empty">Nessun contenuto media pubblicato.</div> : null}
+        <div className="media-grid main-event-media-grid">
+          {event.media.map((item) => (
+            <MediaCard
+              eventId={event.slug}
+              item={item}
+              comments={mediaComments[item.id] || []}
+              viewerAuthenticated={viewerAuthenticated}
+              key={item.id}
+            />
+          ))}
+        </div>
+      </section>
 
       <section className="section internal-events-section" id="eventi-interni">
         <div className="public-section-heading">
