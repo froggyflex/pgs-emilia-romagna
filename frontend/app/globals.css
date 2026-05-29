@@ -1604,6 +1604,35 @@ h3 {
   object-fit: cover;
 }
 
+.media-preview-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.media-preview-button span {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: rgba(16, 24, 40, 0.78);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.media-preview-button:hover img {
+  filter: brightness(0.92);
+}
+
 .media-video {
   display: block;
   object-fit: cover;
@@ -1698,8 +1727,79 @@ h3 {
   padding-top: 10px;
 }
 
+.comment-toggle {
+  width: fit-content;
+}
+
+.comment-composer {
+  margin-top: 10px;
+}
+
 .compact-comments textarea {
   min-height: 72px;
+}
+
+.media-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.media-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(7, 16, 31, 0.84);
+}
+
+.media-lightbox-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  max-width: min(1120px, 96vw);
+  max-height: 92vh;
+  gap: 12px;
+}
+
+.media-lightbox-image {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #101828;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.42);
+}
+
+.media-lightbox-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 999px;
+  background: rgba(16, 24, 40, 0.72);
+  color: #fff;
+}
+
+.media-lightbox-caption {
+  display: grid;
+  gap: 3px;
+  color: #fff;
+}
+
+.media-lightbox-caption span {
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 700;
 }
 
 .media-admin-stats {

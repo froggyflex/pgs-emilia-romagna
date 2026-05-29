@@ -2,13 +2,14 @@
 
 import Image from "next/image";
 import { useState, useTransition } from "react";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, Maximize2, MessageCircle, X } from "lucide-react";
 import type { Comment, MediaItem } from "@/lib/types";
 import { CommentBox } from "./comment-box";
 
 export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { eventId: string; item: MediaItem; comments: Comment[]; viewerAuthenticated: boolean }) {
   const [likes, setLikes] = useState(item.likes || 0);
   const [message, setMessage] = useState("");
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function like() {
@@ -33,7 +34,10 @@ export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { ev
   return (
     <article className="media-thumb media-card">
       {item.type === "photo" ? (
-        <Image src={item.url} width={640} height={480} alt={item.title} />
+        <button className="media-preview-button" type="button" onClick={() => setIsViewerOpen(true)} aria-label="Apri foto intera">
+          <Image src={item.url} width={640} height={480} alt={item.title} />
+          <span><Maximize2 size={16} /> Apri</span>
+        </button>
       ) : isStoredVideo(item.url) ? (
         <video className="embed media-video" src={item.url} controls />
       ) : (
@@ -60,6 +64,21 @@ export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { ev
           <div className="empty">Commenti disattivati per questo contenuto.</div>
         )}
       </div>
+      {item.type === "photo" && isViewerOpen ? (
+        <div className="media-lightbox" role="dialog" aria-modal="true" aria-label={item.title}>
+          <button className="media-lightbox-backdrop" type="button" onClick={() => setIsViewerOpen(false)} aria-label="Chiudi foto" />
+          <div className="media-lightbox-content">
+            <button className="media-lightbox-close" type="button" onClick={() => setIsViewerOpen(false)} aria-label="Chiudi">
+              <X size={20} />
+            </button>
+            <Image className="media-lightbox-image" src={item.url} width={1600} height={1200} alt={item.title} />
+            <div className="media-lightbox-caption">
+              <strong>{item.title}</strong>
+              {item.caption ? <span>{item.caption}</span> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }

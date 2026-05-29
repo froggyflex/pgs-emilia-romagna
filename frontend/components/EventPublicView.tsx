@@ -102,6 +102,8 @@ export async function EventPublicView({
         <div className="stat-card"><strong>{programItems}</strong><p>Punti programma</p></div>
       </section>
 
+      <InternalEventsSection event={event} sections={sections} />
+
       {mainStreamUrl ? (
         <StreamingPanel
           id="streaming"
@@ -162,34 +164,6 @@ export async function EventPublicView({
               viewerAuthenticated={viewerAuthenticated}
               key={item.id}
             />
-          ))}
-        </div>
-      </section>
-
-      <section className="section internal-events-section" id="eventi-interni">
-        <div className="public-section-heading">
-          <div>
-            <span className="small-label">Eventi della manifestazione</span>
-            <h2>Scegli cosa seguire</h2>
-            <p className="muted">Ogni evento interno ha una pagina dedicata con il contenuto corretto per il suo tipo.</p>
-          </div>
-        </div>
-        <div className="internal-event-grid">
-          {sections.length === 0 ? <div className="empty">Nessun evento interno configurato.</div> : null}
-          {sections.map((section) => (
-            <Link className={`internal-event-card internal-event-card-${section.type}`} href={`/events/${event.slug}/${section.slug}`} key={section.id}>
-              <span className="section-type-badge">
-                {section.type === "campionato" ? <Trophy size={15} /> : <PartyPopper size={15} />}
-                {section.type === "campionato" ? "Campionato" : "Intrattenimento"}
-              </span>
-              <h3>{section.title}</h3>
-              <p className="formatted-description">{section.subtitle || section.description || "Evento interno della manifestazione."}</p>
-              <div className="internal-event-meta">
-                {section.startsAt ? <span><CalendarDays size={15} /> {formatDate(section.startsAt)}</span> : null}
-                <span><MapPin size={15} /> {section.location || event.location}</span>
-              </div>
-              <span className="button internal-event-action">Apri evento</span>
-            </Link>
           ))}
         </div>
       </section>
@@ -565,6 +539,38 @@ function getRankingCell(row: RankingRow, column: string) {
   };
 
   return fallback[column] ?? "";
+}
+
+function InternalEventsSection({ event, sections }: { event: EventRecord; sections: EventSection[] }) {
+  return (
+    <section className="section internal-events-section" id="eventi-interni">
+      <div className="public-section-heading">
+        <div>
+          <span className="small-label">Eventi della manifestazione</span>
+          <h2>Scegli cosa seguire</h2>
+          <p className="muted">Ogni evento interno ha una pagina dedicata con il contenuto corretto per il suo tipo.</p>
+        </div>
+      </div>
+      <div className="internal-event-grid">
+        {sections.length === 0 ? <div className="empty">Nessun evento interno configurato.</div> : null}
+        {sections.map((section) => (
+          <Link className={`internal-event-card internal-event-card-${section.type}`} href={`/events/${event.slug}/${section.slug}`} key={section.id}>
+            <span className="section-type-badge">
+              {section.type === "campionato" ? <Trophy size={15} /> : <PartyPopper size={15} />}
+              {section.type === "campionato" ? "Campionato" : "Intrattenimento"}
+            </span>
+            <h3>{section.title}</h3>
+            <p className="formatted-description">{section.subtitle || section.description || "Evento interno della manifestazione."}</p>
+            <div className="internal-event-meta">
+              {section.startsAt ? <span><CalendarDays size={15} /> {formatDate(section.startsAt)}</span> : null}
+              <span><MapPin size={15} /> {section.location || event.location}</span>
+            </div>
+            <span className="button internal-event-action">Apri evento</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function StreamingPanel({

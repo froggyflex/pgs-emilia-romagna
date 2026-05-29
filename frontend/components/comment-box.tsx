@@ -17,6 +17,7 @@ export function CommentBox({ eventId, targetType, targetId, comments: initialCom
   const [body, setBody] = useState("");
   const [comments, setComments] = useState(initialComments);
   const [message, setMessage] = useState("");
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function submit() {
@@ -41,27 +42,33 @@ export function CommentBox({ eventId, targetType, targetId, comments: initialCom
       const saved = await response.json();
       setComments((items) => [saved, ...items]);
       setBody("");
+      setIsComposerOpen(false);
     });
   }
 
   return (
     <div className={compact ? "compact-comments" : ""}>
-      {viewerAuthenticated ? (
-        <>
-          <div className="field">
-            <label htmlFor={commentInputId}>Aggiungi commento</label>
-            <textarea id={commentInputId} value={body} onChange={(event) => setBody(event.target.value)} placeholder="Scrivi un commento..." />
-          </div>
-          <div className="toolbar" style={{ marginTop: 10 }}>
-            <button className="button" type="button" onClick={submit} disabled={isPending || body.trim().length === 0}>
-              Pubblica
-            </button>
-            {message ? <span className="muted">{message}</span> : null}
-          </div>
-        </>
-      ) : (
-        <div className="interaction-lock">Accedi con Google per commentare.</div>
-      )}
+      <button className="ghost-button comment-toggle" type="button" onClick={() => setIsComposerOpen((value) => !value)}>
+        {isComposerOpen ? "Chiudi commento" : "Aggiungi commento"}
+      </button>
+      {isComposerOpen ? (
+        viewerAuthenticated ? (
+          <>
+            <div className="field comment-composer">
+              <label htmlFor={commentInputId}>Commento</label>
+              <textarea id={commentInputId} value={body} onChange={(event) => setBody(event.target.value)} placeholder="Scrivi un commento..." />
+            </div>
+            <div className="toolbar" style={{ marginTop: 10 }}>
+              <button className="button" type="button" onClick={submit} disabled={isPending || body.trim().length === 0}>
+                Pubblica
+              </button>
+              {message ? <span className="muted">{message}</span> : null}
+            </div>
+          </>
+        ) : (
+          <div className="interaction-lock">Accedi con Google per commentare.</div>
+        )
+      ) : null}
       {comments.length === 0 ? <div className="empty">Nessun commento pubblicato.</div> : null}
       {comments.map((comment) => (
         <article className="comment" key={comment.id}>
