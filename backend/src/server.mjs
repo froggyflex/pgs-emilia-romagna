@@ -8,6 +8,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { getAllowedOrigins, isAuthBypassed } from "./env.mjs";
 import { getDb } from "./db.mjs";
+import { isValidUploadToken } from "./upload-token.mjs";
 import {
   addEventMedia,
   addComment,
@@ -24,6 +25,8 @@ import { commentSchema, eventSchema, visitSchema } from "./validators.mjs";
 const port = Number(process.env.PORT || 8787);
 const uploadsDir = path.resolve("uploads");
 const allowedOrigins = getAllowedOrigins();
+const maxUploadSizeMb = Number(process.env.MAX_UPLOAD_SIZE_MB || 750);
+const maxUploadSizeBytes = maxUploadSizeMb * 1024 * 1024;
 const allowedTypes = new Set([
   "image/jpeg",
   "image/png",
@@ -117,7 +120,7 @@ createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && url.pathname.match(/^\/api\/events\/[^/]+\/media$/)) {
-      if (!requireTrustedWrite(request, response)) return;
+      if (!requireTrustedUpload(request, response)) return;
       const slug = decodeURIComponent(url.pathname.split("/")[3]);
       await handleEventMediaUpload(request, response, slug);
       return;
@@ -189,7 +192,7 @@ createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && url.pathname === "/api/uploads") {
-      if (!requireTrustedWrite(request, response)) return;
+      if (!requireTrustedUpload(request, response)) return;
       await handleUploads(request, response);
       return;
     }
@@ -222,8 +225,8 @@ async function handleUploads(request, response) {
       return;
     }
 
-    if (file.size > 120 * 1024 * 1024) {
-      sendJson(response, 400, { message: `${file.name} is too large` });
+    if (file.size > maxUploadSizeBytes) {
+      sendJson(response, 400, { message: `${file.name} supera il limite di ${maxUploadSizeMb} MB` });
       return;
     }
 
@@ -265,8 +268,8 @@ async function handleEventMediaUpload(request, response, eventSlug) {
       return;
     }
 
-    if (file.size > 120 * 1024 * 1024) {
-      sendJson(response, 400, { message: `${file.name} is too large` });
+    if (file.size > maxUploadSizeBytes) {
+      sendJson(response, 400, { message: `${file.name} supera il limite di ${maxUploadSizeMb} MB` });
       return;
     }
 
@@ -396,7 +399,7 @@ function setCorsHeaders(request, response) {
     response.setHeader("Vary", "Origin");
   }
 
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type,x-backend-service-token");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type,x-backend-service-token,x-upload-token");
   response.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
 }
 
@@ -421,6 +424,15 @@ function requireTrustedWrite(request, response) {
   }
 
   sendJson(response, 401, { message: "Backend write requires the frontend service token" });
+  return false;
+}
+
+function requireTrustedUpload(request, response) {
+  if (isTrustedRequest(request) || isTrustedUploadRequest(request)) {
+    return true;
+  }
+
+  sendJson(response, 401, { message: "Upload authorization required" });
   return false;
 }
 
@@ -453,6 +465,11 @@ function isTrustedRequest(request) {
   const received = request.headers["x-backend-service-token"];
 
   return Boolean(configured && typeof received === "string" && received === configured);
+}
+
+function isTrustedUploadRequest(request) {
+  const token = request.headers["x-upload-token"];
+  return isValidUploadToken(token, process.env.BACKEND_SERVICE_TOKEN);
 }
 
 function requestOrigin(request) {

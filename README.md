@@ -9,9 +9,9 @@ Workspace for `eventilive.pgsemiliaromagna.org`.
 
 Atlas stores event data, comments, likes, and uploaded media files. Vercel serves the UI. Render serves the API that reads and writes Atlas.
 
-The browser never receives the Atlas URI or the backend service token. Authenticated admin/comment writes go through Vercel API routes, then Vercel calls Render with the shared `BACKEND_SERVICE_TOKEN`.
+The browser never receives the Atlas URI or the backend service token. Authenticated admin/comment writes go through Vercel API routes, then Vercel calls Render with the shared `BACKEND_SERVICE_TOKEN`. Large admin media uploads use a short-lived upload ticket, so the video goes directly from the browser to the Render backend instead of passing through Vercel.
 
-`ADMIN_EMAILS` controls operator access. Signed-in non-admin users can comment and publish photo/video posts to published event pages, but cannot open or write through the admin event editor.
+`ADMIN_EMAILS` controls operator access. Signed-in non-admin users can comment and like media, but cannot upload media, open the admin editor, or write admin content.
 
 ## Local Setup
 
@@ -37,6 +37,7 @@ AUTH_GOOGLE_SECRET="google-client-secret"
 ADMIN_EMAILS="operator@example.com,andreas@example.com"
 NEXT_PUBLIC_SITE_URL="http://127.0.0.1:5173"
 NEXT_PUBLIC_API_URL="http://127.0.0.1:8787/api"
+NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB="750"
 BACKEND_SERVICE_TOKEN="same-long-random-value-as-backend"
 BYPASS_AUTH="true"
 ```
@@ -49,6 +50,7 @@ MONGODB_DB="pgs-eventi-live"
 PORT="8787"
 FRONTEND_ORIGINS="http://127.0.0.1:5173,http://localhost:5173"
 BACKEND_SERVICE_TOKEN="same-long-random-value-as-frontend"
+MAX_UPLOAD_SIZE_MB="750"
 BYPASS_AUTH="true"
 ```
 
@@ -91,6 +93,7 @@ Set:
 ```bash
 NEXT_PUBLIC_SITE_URL="https://eventilive.pgsemiliaromagna.org"
 NEXT_PUBLIC_API_URL="https://YOUR-RENDER-SERVICE.onrender.com/api"
+NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB="750"
 AUTH_SECRET="long-random-secret"
 AUTH_GOOGLE_ID="google-client-id"
 AUTH_GOOGLE_SECRET="google-client-secret"
@@ -115,6 +118,7 @@ MONGODB_URI="mongodb+srv://USER:PASSWORD@cluster.mongodb.net/pgs-eventi-live?ret
 MONGODB_DB="pgs-eventi-live"
 FRONTEND_ORIGINS="https://eventilive.pgsemiliaromagna.org"
 BACKEND_SERVICE_TOKEN="same-long-random-value-as-vercel"
+MAX_UPLOAD_SIZE_MB="750"
 ```
 
 Manual Render commands:

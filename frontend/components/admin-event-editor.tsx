@@ -19,6 +19,7 @@ import {
   Trophy,
   Trash2
 } from "lucide-react";
+import { uploadFilesDirect } from "@/lib/direct-upload-client";
 import type { Comment, EventField, EventRecord, EventSection, EventSectionType, EventStatus, FeedPost, Match, MediaItem, ProgramItem, RankingRow } from "@/lib/types";
 import { AnalyticsDashboard } from "./analytics-dashboard";
 
@@ -680,6 +681,9 @@ function RankingsEditor({ event, onChange }: EditorProps) {
 
 function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Comment[] }) {
   const campionatoSections = getCampionatoSections(event);
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   function patchMedia(id: string, patch: Partial<MediaItem>) {
     onChange({ ...event, media: event.media.map((item) => (item.id === id ? { ...item, ...patch } : item)) });
@@ -692,31 +696,39 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
   async function uploadMedia(files: FileList | null) {
     if (!files?.length) return;
 
-    const formData = new FormData();
-    Array.from(files).forEach((file) => formData.append("file", file));
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadMessage("Caricamento in corso...");
 
-    const response = await fetch("/api/uploads", {
-      method: "POST",
-      body: formData
-    });
+    try {
+      const result = await uploadFilesDirect({
+        files: Array.from(files),
+        onProgress: (percent) => {
+          setUploadProgress(percent);
+          setUploadMessage(percent >= 100 ? "Video caricato, salvataggio in corso..." : `Caricamento ${percent}%`);
+        }
+      });
+      const now = new Date().toISOString();
+      const newMedia = result.files.map((file) => ({
+        id: crypto.randomUUID(),
+        sectionId: campionatoSections[0]?.id,
+        type: file.type,
+        title: file.name.replace(/\.[^.]+$/, ""),
+        url: file.url,
+        caption: "",
+        commentsEnabled: true,
+        likes: 0,
+        createdAt: now
+      } satisfies MediaItem));
 
-    if (!response.ok) return;
-
-    const result = await response.json() as { files: Array<{ url: string; type: MediaItem["type"]; name: string }> };
-    const now = new Date().toISOString();
-    const newMedia = result.files.map((file) => ({
-      id: crypto.randomUUID(),
-      sectionId: campionatoSections[0]?.id,
-      type: file.type,
-      title: file.name.replace(/\.[^.]+$/, ""),
-      url: file.url,
-      caption: "",
-      commentsEnabled: true,
-      likes: 0,
-      createdAt: now
-    } satisfies MediaItem));
-
-    onChange({ ...event, media: [...newMedia, ...event.media] });
+      onChange({ ...event, media: [...newMedia, ...event.media] });
+      setUploadMessage("Caricamento completato. Premi Salva per rendere definitive le modifiche.");
+    } catch (error) {
+      setUploadMessage(error instanceof Error ? error.message : "Caricamento non riuscito.");
+    } finally {
+      setIsUploading(false);
+      window.setTimeout(() => setUploadProgress(null), 1400);
+    }
   }
 
   return (
@@ -725,10 +737,21 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
       <div className="stack">
         <label className="media-upload-dropzone">
           <ImagePlus size={22} />
-          <strong>Carica foto o video</strong>
-          <span>Puoi selezionare piu file insieme. Aggiungi poi la didascalia.</span>
-          <input type="file" accept="image/*,video/*" multiple onChange={(input) => uploadMedia(input.target.files)} />
+          <strong>{isUploading ? "Caricamento in corso..." : "Carica foto o video"}</strong>
+          <span>Puoi selezionare piu file insieme, anche video grandi. Aggiungi poi la didascalia.</span>
+          <input
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            disabled={isUploading}
+            onChange={(input) => {
+              uploadMedia(input.target.files);
+              input.target.value = "";
+            }}
+          />
         </label>
+        {uploadProgress !== null ? <UploadProgress percent={uploadProgress} /> : null}
+        {uploadMessage ? <div className={`status ${uploadMessage.includes("completato") ? "done" : uploadMessage.includes("non riuscito") || uploadMessage.includes("supera") ? "error" : ""}`}>{uploadMessage}</div> : null}
         {event.media.length === 0 ? <div className="empty">Nessun contenuto media.</div> : null}
         {event.media.map((item) => (
           <div className="editor-item" key={item.id}>
@@ -793,6 +816,20 @@ function MediaCommentPreview({ comments }: { comments: Comment[] }) {
           <p>{comment.body}</p>
         </article>
       ))}
+    </div>
+  );
+}
+
+function UploadProgress({ percent }: { percent: number }) {
+  return (
+    <div className="upload-progress" aria-label={`Caricamento ${percent}%`}>
+      <div className="upload-progress-header">
+        <span>Caricamento media</span>
+        <strong>{percent}%</strong>
+      </div>
+      <div className="upload-progress-track">
+        <span style={{ width: `${percent}%` }} />
+      </div>
     </div>
   );
 }
@@ -1026,23 +1063,14 @@ function AssetInput({ label, value, onChange, full = false }: { label: string; v
     setIsUploading(true);
     setMessage("");
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch("/api/uploads", {
-      method: "POST",
-      body: formData
-    });
-
-    setIsUploading(false);
-
-    if (!response.ok) {
-      setMessage("Caricamento non riuscito.");
-      return;
+    try {
+      const result = await uploadFilesDirect({ files: [file] });
+      onChange(result.url || result.files[0]?.url || "");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Caricamento non riuscito.");
+    } finally {
+      setIsUploading(false);
     }
-
-    const result = await response.json() as { url: string };
-    onChange(result.url);
   }
 
   return (

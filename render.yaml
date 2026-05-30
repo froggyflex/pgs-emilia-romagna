@@ -19,3 +19,5 @@ services:
         value: https://eventilive.pgsemiliaromagna.org
       - key: BACKEND_SERVICE_TOKEN
         sync: false
+      - key: MAX_UPLOAD_SIZE_MB
+        value: 750
