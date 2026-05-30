@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useTransition } from "react";
 import { Heart, Maximize2, MessageCircle, X } from "lucide-react";
 import type { Comment, MediaItem } from "@/lib/types";
+import { getEmbeddableVideoUrl, isDirectVideoUrl } from "@/lib/media-url";
 import { CommentBox } from "./comment-box";
 
 export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { eventId: string; item: MediaItem; comments: Comment[]; viewerAuthenticated: boolean }) {
@@ -11,6 +11,7 @@ export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { ev
   const [message, setMessage] = useState("");
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const embedUrl = item.type === "video" ? getEmbeddableVideoUrl(item.url) : "";
 
   function like() {
     startTransition(async () => {
@@ -35,13 +36,16 @@ export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { ev
     <article className="media-thumb media-card">
       {item.type === "photo" ? (
         <button className="media-preview-button" type="button" onClick={() => setIsViewerOpen(true)} aria-label="Apri foto intera">
-          <Image src={item.url} width={640} height={480} alt={item.title} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.url} alt={item.title} />
           <span><Maximize2 size={16} /> Apri</span>
         </button>
-      ) : isStoredVideo(item.url) ? (
+      ) : isDirectVideoUrl(item.url) ? (
         <video className="embed media-video" src={item.url} controls />
+      ) : embedUrl ? (
+        <iframe className="embed" src={embedUrl} title={item.title} allowFullScreen />
       ) : (
-        <iframe className="embed" src={item.url} title={item.title} allowFullScreen />
+        <a className="media-external-link" href={item.url} target="_blank" rel="noreferrer">Apri video</a>
       )}
       <div className="card-body media-card-body">
         <div className="media-title-row">
@@ -71,7 +75,8 @@ export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { ev
             <button className="media-lightbox-close" type="button" onClick={() => setIsViewerOpen(false)} aria-label="Chiudi">
               <X size={20} />
             </button>
-            <Image className="media-lightbox-image" src={item.url} width={1600} height={1200} alt={item.title} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="media-lightbox-image" src={item.url} alt={item.title} />
             <div className="media-lightbox-caption">
               <strong>{item.title}</strong>
               {item.caption ? <span>{item.caption}</span> : null}
@@ -81,8 +86,4 @@ export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { ev
       ) : null}
     </article>
   );
-}
-
-function isStoredVideo(url: string) {
-  return url.includes("/uploads/") || /\.(mp4|webm|mov)(?:\?|$)/i.test(url);
 }

@@ -20,6 +20,7 @@ import {
   Trash2
 } from "lucide-react";
 import { uploadFilesDirect } from "@/lib/direct-upload-client";
+import { getEmbeddableVideoUrl, inferMediaTypeFromUrl, isDirectVideoUrl, titleFromMediaUrl } from "@/lib/media-url";
 import type { Comment, EventField, EventRecord, EventSection, EventSectionType, EventStatus, FeedPost, Match, MediaItem, ProgramItem, RankingRow } from "@/lib/types";
 import { AnalyticsDashboard } from "./analytics-dashboard";
 
@@ -684,6 +685,9 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
   const [uploadMessage, setUploadMessage] = useState("");
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [mediaUrlCaption, setMediaUrlCaption] = useState("");
+  const [mediaUrlMessage, setMediaUrlMessage] = useState("");
 
   function patchMedia(id: string, patch: Partial<MediaItem>) {
     onChange({ ...event, media: event.media.map((item) => (item.id === id ? { ...item, ...patch } : item)) });
@@ -731,9 +735,42 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
     }
   }
 
+  function addMediaUrl() {
+    const url = mediaUrl.trim();
+
+    if (!url) {
+      setMediaUrlMessage("Inserisci un URL valido.");
+      return;
+    }
+
+    try {
+      new URL(url);
+    } catch {
+      setMediaUrlMessage("URL non valido.");
+      return;
+    }
+
+    const item: MediaItem = {
+      id: crypto.randomUUID(),
+      sectionId: campionatoSections[0]?.id,
+      type: inferMediaTypeFromUrl(url),
+      title: titleFromMediaUrl(url),
+      url,
+      caption: mediaUrlCaption.trim(),
+      commentsEnabled: true,
+      likes: 0,
+      createdAt: new Date().toISOString()
+    };
+
+    onChange({ ...event, media: [item, ...event.media] });
+    setMediaUrl("");
+    setMediaUrlCaption("");
+    setMediaUrlMessage("Media aggiunto. Premi Salva per rendere definitive le modifiche.");
+  }
+
   return (
     <div>
-      <PanelHeader title="Foto e video" text="Carica una o piu foto/video. Ogni contenuto potra ricevere like e commenti." />
+      <PanelHeader title="Foto e video" text="Carica file oppure aggiungi un link a una foto o a un video. Ogni contenuto potra ricevere like e commenti." />
       <div className="stack">
         <label className="media-upload-dropzone">
           <ImagePlus size={22} />
@@ -752,6 +789,24 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
         </label>
         {uploadProgress !== null ? <UploadProgress percent={uploadProgress} /> : null}
         {uploadMessage ? <div className={`status ${uploadMessage.includes("completato") ? "done" : uploadMessage.includes("non riuscito") || uploadMessage.includes("supera") ? "error" : ""}`}>{uploadMessage}</div> : null}
+        <div className="media-url-panel">
+          <div>
+            <span className="small-label">Link esterno</span>
+            <h3>Aggiungi media da URL</h3>
+            <p className="muted">Incolla un link diretto a una foto/video o un link YouTube/Vimeo.</p>
+          </div>
+          <div className="form-grid compact">
+            <Input label="URL media" value={mediaUrl} onChange={(value) => {
+              setMediaUrl(value);
+              setMediaUrlMessage("");
+            }} full />
+            <Input label="Didascalia" value={mediaUrlCaption} onChange={setMediaUrlCaption} full />
+          </div>
+          <div className="toolbar">
+            <button className="button" type="button" onClick={addMediaUrl}><Plus size={17} /> Aggiungi URL</button>
+            {mediaUrlMessage ? <span className={`status ${mediaUrlMessage.includes("aggiunto") ? "done" : "error"}`}>{mediaUrlMessage}</span> : null}
+          </div>
+        </div>
         {event.media.length === 0 ? <div className="empty">Nessun contenuto media.</div> : null}
         {event.media.map((item) => (
           <div className="editor-item" key={item.id}>
@@ -792,8 +847,14 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
 }
 
 function MediaPreview({ item }: { item: MediaItem }) {
-  if (item.type === "video") {
+  const embedUrl = item.type === "video" ? getEmbeddableVideoUrl(item.url) : "";
+
+  if (item.type === "video" && isDirectVideoUrl(item.url)) {
     return <video className="media-editor-preview" src={item.url} muted controls />;
+  }
+
+  if (item.type === "video" && embedUrl) {
+    return <iframe className="media-editor-preview media-editor-embed-preview" src={embedUrl} title={item.title} />;
   }
 
   return (

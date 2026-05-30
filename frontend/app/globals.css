@@ -1638,6 +1638,17 @@ h3 {
   object-fit: cover;
 }
 
+.media-external-link {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  padding: 24px;
+  background: #101828;
+  color: #fff;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .media-card {
   display: flex;
   flex-direction: column;
@@ -1867,6 +1878,15 @@ h3 {
   display: none;
 }
 
+.media-url-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(21, 66, 127, 0.16);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ffffff, #f8fbff);
+}
+
 .upload-progress {
   display: grid;
   gap: 8px;
@@ -1915,6 +1935,10 @@ h3 {
   border-radius: 8px;
   object-fit: cover;
   background: #101828;
+}
+
+.media-editor-embed-preview {
+  pointer-events: none;
 }
 
 .media-simple-form {
