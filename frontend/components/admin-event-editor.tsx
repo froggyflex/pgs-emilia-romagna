@@ -62,12 +62,12 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
     setMessage(null);
   }
 
-  async function save() {
+  async function save(snapshotOverride?: EventRecord) {
     if (savingRef.current) return;
 
     const saveId = activeSaveRef.current + 1;
     const savedEditVersion = editVersionRef.current;
-    const snapshot = eventRef.current;
+    const snapshot = snapshotOverride || eventRef.current;
     savingRef.current = true;
     activeSaveRef.current = saveId;
     setIsSaving(true);
@@ -86,7 +86,7 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
 
       if (!response.ok || !payload?.slug) {
         setMessage({ type: "error", text: payload?.message || "Salvataggio non riuscito." });
-        return;
+        return false;
       }
 
       const saved = normalizeEventSections(payload as EventRecord);
@@ -95,7 +95,7 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
         eventRef.current = saved;
         setEventState(saved);
         setMessage({ type: "success", text: "Salvato." });
-        return;
+        return true;
       }
 
       const currentWithSaveMetadata = {
@@ -107,16 +107,23 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
       eventRef.current = currentWithSaveMetadata;
       setEventState(currentWithSaveMetadata);
       setMessage({ type: "error", text: "Alcune modifiche sono successive al salvataggio. Premi Salva di nuovo." });
+      return false;
     } catch {
       if (activeSaveRef.current === saveId) {
         setMessage({ type: "error", text: "Salvataggio non riuscito." });
       }
+      return false;
     } finally {
       if (activeSaveRef.current === saveId) {
         savingRef.current = false;
         setIsSaving(false);
       }
     }
+  }
+
+  async function updateAndSave(nextEvent: EventRecord) {
+    updateEvent(nextEvent);
+    return await save(nextEvent);
   }
 
   return (
@@ -133,12 +140,12 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
         <div className="editor-actions">
           {message ? <span className={`status ${message.type === "success" ? "done" : message.type === "error" ? "error" : ""}`}>{message.text}</span> : null}
           <Link className="ghost-button" href={`/events/${event.slug}`}><Eye size={17} /> Pubblico</Link>
-          <button className="button" type="button" onClick={save} disabled={isSaving}><Save size={17} /> {isSaving ? "Salvataggio..." : "Salva"}</button>
+          <button className="button" type="button" onClick={() => save()} disabled={isSaving}><Save size={17} /> {isSaving ? "Salvataggio..." : "Salva"}</button>
         </div>
       </section>
       <div className="editor-save-dock">
         {message ? <span className={`status ${message.type === "success" ? "done" : message.type === "error" ? "error" : ""}`}>{message.text}</span> : null}
-        <button className="button" type="button" onClick={save} disabled={isSaving}><Save size={17} /> {isSaving ? "Salvataggio..." : "Salva"}</button>
+        <button className="button" type="button" onClick={() => save()} disabled={isSaving}><Save size={17} /> {isSaving ? "Salvataggio..." : "Salva"}</button>
       </div>
 
       <section className="editor-layout">
@@ -157,7 +164,7 @@ export function AdminEventEditor({ event: initialEvent, comments }: { event: Eve
           {tab === "sections" ? <SectionsEditor event={event} onChange={updateEvent} /> : null}
           {tab === "fields" ? <FieldsEditor event={event} onChange={updateEvent} /> : null}
           {tab === "rankings" ? <RankingsEditor event={event} onChange={updateEvent} /> : null}
-          {tab === "media" ? <MediaEditor event={event} onChange={updateEvent} comments={comments} /> : null}
+          {tab === "media" ? <MediaEditor event={event} onChange={updateEvent} onSave={updateAndSave} comments={comments} /> : null}
           {tab === "feed" ? <FeedEditor event={event} onChange={updateEvent} /> : null}
           {tab === "analytics" ? <AnalyticsDashboard eventSlug={event.slug} /> : null}
         </div>
@@ -681,7 +688,7 @@ function RankingsEditor({ event, onChange }: EditorProps) {
   );
 }
 
-function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Comment[] }) {
+function MediaEditor({ event, onChange, onSave, comments }: EditorProps & { comments: Comment[] }) {
   const campionatoSections = getCampionatoSections(event);
   const [uploadMessage, setUploadMessage] = useState("");
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -695,8 +702,21 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
     onChange({ ...event, media: event.media.map((item) => (item.id === id ? { ...item, ...patch } : item)) });
   }
 
+  async function commitMedia(nextEvent: EventRecord, successMessage: string) {
+    onChange(nextEvent);
+
+    if (!onSave) {
+      setMediaUrlMessage("Modifica pronta. Premi Salva per renderla definitiva.");
+      return;
+    }
+
+    const saved = await onSave(nextEvent);
+    setMediaUrlMessage(saved ? successMessage : "Media non salvato. Controlla il messaggio di salvataggio in alto.");
+  }
+
   function removeMedia(id: string) {
-    onChange({ ...event, media: event.media.filter((item) => item.id !== id) });
+    const nextEvent = { ...event, media: event.media.filter((item) => item.id !== id) };
+    void commitMedia(nextEvent, "Media eliminato e salvato.");
   }
 
   async function uploadMedia(files: FileList | null) {
@@ -727,8 +747,11 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
         createdAt: now
       } satisfies MediaItem));
 
-      onChange({ ...event, media: [...newMedia, ...event.media] });
-      setUploadMessage("Caricamento completato. Premi Salva per rendere definitive le modifiche.");
+      const nextEvent = { ...event, media: [...newMedia, ...event.media] };
+      onChange(nextEvent);
+      setUploadMessage("Caricamento completato. Salvataggio media in corso...");
+      const saved = onSave ? await onSave(nextEvent) : false;
+      setUploadMessage(saved ? "Media caricato e salvato." : "Media caricato, ma non salvato. Premi Salva e controlla eventuali errori.");
     } catch (error) {
       setUploadMessage(error instanceof Error ? error.message : "Caricamento non riuscito.");
     } finally {
@@ -737,7 +760,7 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
     }
   }
 
-  function addMediaUrl() {
+  async function addMediaUrl() {
     const url = mediaUrl.trim();
 
     if (!url) {
@@ -764,11 +787,10 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
       createdAt: new Date().toISOString()
     };
 
-    onChange({ ...event, media: [item, ...event.media] });
+    await commitMedia({ ...event, media: [item, ...event.media] }, "Media aggiunto e salvato.");
     setMediaUrl("");
     setMediaUrlType("auto");
     setMediaUrlCaption("");
-    setMediaUrlMessage("Media aggiunto. Premi Salva per rendere definitive le modifiche.");
   }
 
   return (
@@ -791,7 +813,7 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
           />
         </label>
         {uploadProgress !== null ? <UploadProgress percent={uploadProgress} /> : null}
-        {uploadMessage ? <div className={`status ${uploadMessage.includes("completato") ? "done" : uploadMessage.includes("non riuscito") || uploadMessage.includes("supera") ? "error" : ""}`}>{uploadMessage}</div> : null}
+        {uploadMessage ? <div className={`status ${uploadMessage.includes("salvato") && !uploadMessage.includes("non salvato") ? "done" : uploadMessage.includes("non riuscito") || uploadMessage.includes("supera") || uploadMessage.includes("non salvato") ? "error" : ""}`}>{uploadMessage}</div> : null}
         <div className="media-url-panel">
           <div>
             <span className="small-label">Link esterno</span>
@@ -814,8 +836,8 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
             <Input label="Didascalia" value={mediaUrlCaption} onChange={setMediaUrlCaption} full />
           </div>
           <div className="toolbar">
-            <button className="button" type="button" onClick={addMediaUrl}><Plus size={17} /> Aggiungi URL</button>
-            {mediaUrlMessage ? <span className={`status ${mediaUrlMessage.includes("aggiunto") ? "done" : "error"}`}>{mediaUrlMessage}</span> : null}
+            <button className="button" type="button" onClick={() => void addMediaUrl()}><Plus size={17} /> Aggiungi URL</button>
+            {mediaUrlMessage ? <span className={`status ${mediaUrlMessage.includes(" e salvato") ? "done" : "error"}`}>{mediaUrlMessage}</span> : null}
           </div>
         </div>
         {event.media.length === 0 ? <div className="empty">Nessun contenuto media.</div> : null}
@@ -1079,6 +1101,7 @@ function FeedEditor({ event, onChange }: EditorProps) {
 type EditorProps = {
   event: EventRecord;
   onChange: (event: EventRecord) => void;
+  onSave?: (event: EventRecord) => Promise<boolean | undefined>;
 };
 
 function PanelHeader({ title, text, action }: { title: string; text: string; action?: React.ReactNode }) {
