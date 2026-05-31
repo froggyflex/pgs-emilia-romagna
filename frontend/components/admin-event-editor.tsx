@@ -26,6 +26,7 @@ import { AnalyticsDashboard } from "./analytics-dashboard";
 
 type Tab = "details" | "sections" | "fields" | "rankings" | "media" | "feed" | "analytics";
 type SaveMessage = { type: "success" | "error" | "info"; text: string } | null;
+type MediaUrlType = "auto" | "photo" | "video";
 
 const statusLabels: Record<EventStatus, string> = {
   draft: "Bozza",
@@ -686,6 +687,7 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [mediaUrl, setMediaUrl] = useState("");
+  const [mediaUrlType, setMediaUrlType] = useState<MediaUrlType>("auto");
   const [mediaUrlCaption, setMediaUrlCaption] = useState("");
   const [mediaUrlMessage, setMediaUrlMessage] = useState("");
 
@@ -753,7 +755,7 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
     const item: MediaItem = {
       id: crypto.randomUUID(),
       sectionId: campionatoSections[0]?.id,
-      type: inferMediaTypeFromUrl(url),
+      type: mediaUrlType === "auto" ? inferMediaTypeFromUrl(url) : mediaUrlType,
       title: titleFromMediaUrl(url),
       url,
       caption: mediaUrlCaption.trim(),
@@ -764,6 +766,7 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
 
     onChange({ ...event, media: [item, ...event.media] });
     setMediaUrl("");
+    setMediaUrlType("auto");
     setMediaUrlCaption("");
     setMediaUrlMessage("Media aggiunto. Premi Salva per rendere definitive le modifiche.");
   }
@@ -800,6 +803,14 @@ function MediaEditor({ event, onChange, comments }: EditorProps & { comments: Co
               setMediaUrl(value);
               setMediaUrlMessage("");
             }} full />
+            <label className="field">
+              <span>Tipo media</span>
+              <select value={mediaUrlType} onChange={(input) => setMediaUrlType(input.target.value as MediaUrlType)}>
+                <option value="auto">Automatico</option>
+                <option value="photo">Foto</option>
+                <option value="video">Video</option>
+              </select>
+            </label>
             <Input label="Didascalia" value={mediaUrlCaption} onChange={setMediaUrlCaption} full />
           </div>
           <div className="toolbar">
@@ -855,6 +866,10 @@ function MediaPreview({ item }: { item: MediaItem }) {
 
   if (item.type === "video" && embedUrl) {
     return <iframe className="media-editor-preview media-editor-embed-preview" src={embedUrl} title={item.title} />;
+  }
+
+  if (item.type === "video") {
+    return <a className="media-editor-preview media-editor-external-preview" href={item.url} target="_blank" rel="noreferrer">Video</a>;
   }
 
   return (

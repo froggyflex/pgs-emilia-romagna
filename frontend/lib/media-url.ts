@@ -36,11 +36,27 @@ export function getEmbeddableVideoUrl(url: string) {
     if (host === "player.vimeo.com") {
       return trimmed;
     }
+
+    if (host === "drive.google.com") {
+      const id = getGoogleDriveFileId(parsed);
+      return id ? `https://drive.google.com/file/d/${id}/preview` : "";
+    }
   } catch {
     return "";
   }
 
   return "";
+}
+
+function getGoogleDriveFileId(url: URL) {
+  const parts = url.pathname.split("/").filter(Boolean);
+  const fileIndex = parts.indexOf("d");
+
+  if (parts[0] === "file" && fileIndex !== -1 && parts[fileIndex + 1]) {
+    return parts[fileIndex + 1];
+  }
+
+  return url.searchParams.get("id") || "";
 }
 
 export function titleFromMediaUrl(url: string) {
