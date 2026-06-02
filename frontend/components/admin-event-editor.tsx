@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   BarChart3,
@@ -12,12 +12,15 @@ import {
   GripVertical,
   ImagePlus,
   MapPinned,
+  MessageCircle,
+  Pencil,
   PartyPopper,
   Plus,
   Radio,
   Save,
   Trophy,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
 import { uploadFilesDirect } from "@/lib/direct-upload-client";
 import { getEmbeddableVideoUrl, inferMediaTypeFromUrl, isDirectVideoUrl, titleFromMediaUrl } from "@/lib/media-url";
@@ -689,18 +692,49 @@ function RankingsEditor({ event, onChange }: EditorProps) {
 }
 
 function MediaEditor({ event, onChange, onSave, comments }: EditorProps & { comments: Comment[] }) {
-  const campionatoSections = getCampionatoSections(event);
+  const sections = getEditableSections(event);
   const [uploadMessage, setUploadMessage] = useState("");
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadSectionId, setUploadSectionId] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaUrlType, setMediaUrlType] = useState<MediaUrlType>("auto");
+  const [mediaUrlSectionId, setMediaUrlSectionId] = useState("");
   const [mediaUrlCaption, setMediaUrlCaption] = useState("");
   const [mediaUrlMessage, setMediaUrlMessage] = useState("");
+  const [filterText, setFilterText] = useState("");
+  const [filterType, setFilterType] = useState<"all" | MediaItem["type"]>("all");
+  const [filterSectionId, setFilterSectionId] = useState("all");
+  const [page, setPage] = useState(1);
+  const [editingMedia, setEditingMedia] = useState<MediaItem | null>(null);
+  const [commentMedia, setCommentMedia] = useState<MediaItem | null>(null);
+  const pageSize = 8;
+  const sectionLabels = useMemo(() => getSectionLabelMap(sections), [sections]);
+  const filteredMedia = useMemo(() => {
+    const normalizedSearch = filterText.trim().toLowerCase();
 
-  function patchMedia(id: string, patch: Partial<MediaItem>) {
-    onChange({ ...event, media: event.media.map((item) => (item.id === id ? { ...item, ...patch } : item)) });
-  }
+    return event.media.filter((item) => {
+      const scopeMatches = filterSectionId === "all" || (filterSectionId === "general" ? !item.sectionId : item.sectionId === filterSectionId);
+      const typeMatches = filterType === "all" || item.type === filterType;
+      const textMatches = !normalizedSearch || [item.title, item.caption, item.url, getMediaScopeLabel(item, sectionLabels)]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedSearch));
+
+      return scopeMatches && typeMatches && textMatches;
+    });
+  }, [event.media, filterSectionId, filterText, filterType, sectionLabels]);
+  const totalPages = Math.max(1, Math.ceil(filteredMedia.length / pageSize));
+  const pageMedia = filteredMedia.slice((page - 1) * pageSize, page * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterText, filterType, filterSectionId]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   async function commitMedia(nextEvent: EventRecord, successMessage: string) {
     onChange(nextEvent);
@@ -737,7 +771,7 @@ function MediaEditor({ event, onChange, onSave, comments }: EditorProps & { comm
       const now = new Date().toISOString();
       const newMedia = result.files.map((file) => ({
         id: crypto.randomUUID(),
-        sectionId: campionatoSections[0]?.id,
+        sectionId: uploadSectionId || undefined,
         type: file.type,
         title: file.name.replace(/\.[^.]+$/, ""),
         url: file.url,
@@ -777,7 +811,7 @@ function MediaEditor({ event, onChange, onSave, comments }: EditorProps & { comm
 
     const item: MediaItem = {
       id: crypto.randomUUID(),
-      sectionId: campionatoSections[0]?.id,
+      sectionId: mediaUrlSectionId || undefined,
       type: mediaUrlType === "auto" ? inferMediaTypeFromUrl(url) : mediaUrlType,
       title: titleFromMediaUrl(url),
       url,
@@ -790,13 +824,26 @@ function MediaEditor({ event, onChange, onSave, comments }: EditorProps & { comm
     await commitMedia({ ...event, media: [item, ...event.media] }, "Media aggiunto e salvato.");
     setMediaUrl("");
     setMediaUrlType("auto");
+    setMediaUrlSectionId("");
     setMediaUrlCaption("");
+  }
+
+  async function saveMediaEdit(item: MediaItem) {
+    const nextEvent = { ...event, media: event.media.map((mediaItem) => (mediaItem.id === item.id ? item : mediaItem)) };
+    await commitMedia(nextEvent, "Media aggiornato e salvato.");
+    setEditingMedia(null);
   }
 
   return (
     <div>
       <PanelHeader title="Foto e video" text="Carica file oppure aggiungi un link a una foto o a un video. Ogni contenuto potra ricevere like e commenti." />
       <div className="stack">
+        <MediaScopeSelect
+          label="Associa i prossimi file a"
+          value={uploadSectionId}
+          sections={sections}
+          onChange={setUploadSectionId}
+        />
         <label className="media-upload-dropzone">
           <ImagePlus size={22} />
           <strong>{isUploading ? "Caricamento in corso..." : "Carica foto o video"}</strong>
@@ -821,6 +868,12 @@ function MediaEditor({ event, onChange, onSave, comments }: EditorProps & { comm
             <p className="muted">Incolla un link diretto a una foto/video o un link YouTube/Vimeo.</p>
           </div>
           <div className="form-grid compact">
+            <MediaScopeSelect
+              label="Appartenenza"
+              value={mediaUrlSectionId}
+              sections={sections}
+              onChange={setMediaUrlSectionId}
+            />
             <Input label="URL media" value={mediaUrl} onChange={(value) => {
               setMediaUrl(value);
               setMediaUrlMessage("");
@@ -840,41 +893,101 @@ function MediaEditor({ event, onChange, onSave, comments }: EditorProps & { comm
             {mediaUrlMessage ? <span className={`status ${mediaUrlMessage.includes(" e salvato") ? "done" : "error"}`}>{mediaUrlMessage}</span> : null}
           </div>
         </div>
-        {event.media.length === 0 ? <div className="empty">Nessun contenuto media.</div> : null}
-        {event.media.map((item) => (
-          <div className="editor-item" key={item.id}>
-            <div className="item-toolbar">
-              <div className="media-editor-heading">
-                <MediaPreview item={item} />
-                <div>
-                  <strong>{item.title || "Media"}</strong>
-                  <div className="media-admin-stats">
-                    <span>{item.type === "video" ? "Video" : "Foto"}</span>
-                    <span>{item.likes || 0} like</span>
-                    <span>{comments.filter((comment) => comment.targetType === "media" && comment.targetId === item.id).length} commenti</span>
-                  </div>
-                </div>
-              </div>
-              <button className="icon-danger" type="button" onClick={() => removeMedia(item.id)} aria-label="Elimina media"><Trash2 size={17} /></button>
+        <div className="media-library-panel">
+          <div className="media-library-header">
+            <div>
+              <span className="small-label">Libreria media</span>
+              <h3>{event.media.length} contenuti</h3>
+              <p className="muted">Filtra, modifica o controlla like e commenti dei media pubblicati.</p>
             </div>
-            <div className="form-grid compact media-simple-form">
-              <SectionSelect
-                label="Campionato"
-                value={item.sectionId || ""}
-                sections={campionatoSections}
-                onChange={(sectionId) => patchMedia(item.id, { sectionId })}
-                full
-              />
-              <Input label="Didascalia" value={item.caption || ""} onChange={(caption) => patchMedia(item.id, { caption })} full />
-              <label className="toggle-field full">
-                <input type="checkbox" checked={item.commentsEnabled} onChange={(input) => patchMedia(item.id, { commentsEnabled: input.target.checked })} />
-                <span>Commenti abilitati</span>
-              </label>
-            </div>
-            <MediaCommentPreview comments={comments.filter((comment) => comment.targetType === "media" && comment.targetId === item.id)} />
           </div>
-        ))}
+          <div className="media-library-filters">
+            <label className="field">
+              <span>Cerca</span>
+              <input value={filterText} onChange={(input) => setFilterText(input.target.value)} placeholder="Titolo, didascalia, evento..." />
+            </label>
+            <label className="field">
+              <span>Tipo</span>
+              <select value={filterType} onChange={(input) => setFilterType(input.target.value as "all" | MediaItem["type"])}>
+                <option value="all">Tutti</option>
+                <option value="photo">Foto</option>
+                <option value="video">Video</option>
+              </select>
+            </label>
+            <MediaFilterScopeSelect value={filterSectionId} sections={sections} onChange={setFilterSectionId} />
+          </div>
+          {filteredMedia.length === 0 ? <div className="empty">Nessun contenuto media trovato.</div> : (
+            <>
+              <div className="media-table-wrap">
+                <table className="media-admin-table">
+                  <thead>
+                    <tr>
+                      <th>Media</th>
+                      <th>Appartenenza</th>
+                      <th>Tipo</th>
+                      <th>Interazioni</th>
+                      <th>Azioni</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageMedia.map((item) => {
+                      const itemComments = comments.filter((comment) => comment.targetType === "media" && comment.targetId === item.id);
+
+                      return (
+                        <tr key={item.id}>
+                          <td data-label="Media">
+                            <div className="media-table-title">
+                              <MediaPreview item={item} />
+                              <div>
+                                <strong>{item.title || "Media"}</strong>
+                                {item.caption ? <span>{item.caption}</span> : null}
+                              </div>
+                            </div>
+                          </td>
+                          <td data-label="Appartenenza">{getMediaScopeLabel(item, sectionLabels)}</td>
+                          <td data-label="Tipo"><span className="status">{item.type === "video" ? "Video" : "Foto"}</span></td>
+                          <td data-label="Interazioni">
+                            <button className="media-metric-button" type="button" onClick={() => setCommentMedia(item)}>
+                              <MessageCircle size={15} /> {itemComments.length} commenti
+                            </button>
+                            <span className="media-metric-inline">{item.likes || 0} like</span>
+                          </td>
+                          <td data-label="Azioni">
+                            <div className="media-row-actions">
+                              <button className="ghost-button compact-action" type="button" onClick={() => setEditingMedia(item)}><Pencil size={15} /> Modifica</button>
+                              <button className="icon-danger" type="button" onClick={() => removeMedia(item.id)} aria-label="Elimina media"><Trash2 size={17} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="pager">
+                <button className="ghost-button" type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1}>Precedente</button>
+                <span>Pagina {page} di {totalPages}</span>
+                <button className="ghost-button" type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page === totalPages}>Successiva</button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
+      {editingMedia ? (
+        <MediaEditDialog
+          item={editingMedia}
+          sections={sections}
+          onClose={() => setEditingMedia(null)}
+          onSave={(item) => void saveMediaEdit(item)}
+        />
+      ) : null}
+      {commentMedia ? (
+        <MediaCommentsDialog
+          item={commentMedia}
+          comments={comments.filter((comment) => comment.targetType === "media" && comment.targetId === commentMedia.id)}
+          onClose={() => setCommentMedia(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -900,22 +1013,149 @@ function MediaPreview({ item }: { item: MediaItem }) {
   );
 }
 
-function MediaCommentPreview({ comments }: { comments: Comment[] }) {
-  if (comments.length === 0) {
-    return <div className="media-comment-preview empty">Nessun commento su questo contenuto.</div>;
+function MediaEditDialog({
+  item,
+  sections,
+  onClose,
+  onSave
+}: {
+  item: MediaItem;
+  sections: EventSection[];
+  onClose: () => void;
+  onSave: (item: MediaItem) => void;
+}) {
+  const [draft, setDraft] = useState(item);
+
+  function patch(patch: Partial<MediaItem>) {
+    setDraft((current) => ({ ...current, ...patch }));
   }
 
   return (
-    <div className="media-comment-preview">
-      <strong>Ultimi commenti</strong>
-      {comments.slice(0, 3).map((comment) => (
-        <article key={comment.id}>
-          <span>{comment.authorName}</span>
-          <p>{comment.body}</p>
-        </article>
-      ))}
+    <div className="admin-modal" role="dialog" aria-modal="true" aria-label="Modifica media">
+      <button className="admin-modal-backdrop" type="button" onClick={onClose} aria-label="Chiudi" />
+      <div className="admin-modal-panel">
+        <div className="admin-modal-header">
+          <div>
+            <span className="small-label">Media</span>
+            <h3>Modifica contenuto</h3>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Chiudi"><X size={18} /></button>
+        </div>
+        <div className="form-grid compact">
+          <MediaScopeSelect label="Appartenenza" value={draft.sectionId || ""} sections={sections} onChange={(sectionId) => patch({ sectionId: sectionId || undefined })} />
+          <label className="field">
+            <span>Tipo</span>
+            <select value={draft.type} onChange={(input) => patch({ type: input.target.value as MediaItem["type"] })}>
+              <option value="photo">Foto</option>
+              <option value="video">Video</option>
+            </select>
+          </label>
+          <Input label="Titolo" value={draft.title || ""} onChange={(title) => patch({ title })} full />
+          <Input label="URL" value={draft.url || ""} onChange={(url) => patch({ url })} full />
+          <Input label="Didascalia" value={draft.caption || ""} onChange={(caption) => patch({ caption })} full />
+          <label className="toggle-field full">
+            <input type="checkbox" checked={draft.commentsEnabled} onChange={(input) => patch({ commentsEnabled: input.target.checked })} />
+            <span>Commenti abilitati</span>
+          </label>
+        </div>
+        <div className="toolbar modal-actions">
+          <button className="ghost-button" type="button" onClick={onClose}>Annulla</button>
+          <button className="button" type="button" onClick={() => onSave(draft)}><Save size={17} /> Salva media</button>
+        </div>
+      </div>
     </div>
   );
+}
+
+function MediaCommentsDialog({ item, comments, onClose }: { item: MediaItem; comments: Comment[]; onClose: () => void }) {
+  if (comments.length === 0) {
+    return (
+      <div className="admin-modal" role="dialog" aria-modal="true" aria-label="Commenti media">
+        <button className="admin-modal-backdrop" type="button" onClick={onClose} aria-label="Chiudi" />
+        <div className="admin-modal-panel">
+          <div className="admin-modal-header">
+            <div>
+              <span className="small-label">Commenti</span>
+              <h3>{item.title || "Media"}</h3>
+            </div>
+            <button className="icon-button" type="button" onClick={onClose} aria-label="Chiudi"><X size={18} /></button>
+          </div>
+          <div className="empty">Nessun commento su questo contenuto.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-modal" role="dialog" aria-modal="true" aria-label="Commenti media">
+      <button className="admin-modal-backdrop" type="button" onClick={onClose} aria-label="Chiudi" />
+      <div className="admin-modal-panel">
+        <div className="admin-modal-header">
+          <div>
+            <span className="small-label">Commenti</span>
+            <h3>{item.title || "Media"}</h3>
+          </div>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="Chiudi"><X size={18} /></button>
+        </div>
+        <div className="media-comment-preview in-modal">
+          {comments.map((comment) => (
+            <article key={comment.id}>
+              <span>{comment.authorName}</span>
+              <p>{comment.body}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MediaScopeSelect({
+  label,
+  value,
+  sections,
+  onChange
+}: {
+  label: string;
+  value: string;
+  sections: EventSection[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <select value={value} onChange={(input) => onChange(input.target.value)}>
+        <option value="">Manifestazione generale</option>
+        {sections.map((section) => (
+          <option value={section.id} key={section.id}>{section.title}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function MediaFilterScopeSelect({ value, sections, onChange }: { value: string; sections: EventSection[]; onChange: (value: string) => void }) {
+  return (
+    <label className="field">
+      <span>Appartenenza</span>
+      <select value={value} onChange={(input) => onChange(input.target.value)}>
+        <option value="all">Tutti</option>
+        <option value="general">Manifestazione generale</option>
+        {sections.map((section) => (
+          <option value={section.id} key={section.id}>{section.title}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function getSectionLabelMap(sections: EventSection[]) {
+  return new Map(sections.map((section) => [section.id, section.title]));
+}
+
+function getMediaScopeLabel(item: Pick<MediaItem, "sectionId">, sectionLabels: Map<string, string>) {
+  if (!item.sectionId) return "Manifestazione generale";
+  return sectionLabels.get(item.sectionId) || "Evento interno";
 }
 
 function UploadProgress({ percent }: { percent: number }) {

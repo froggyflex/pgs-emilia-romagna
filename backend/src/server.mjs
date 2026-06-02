@@ -246,6 +246,7 @@ async function handleEventMediaUpload(request, response, eventSlug) {
   const authorName = String(formData.get("authorName") || "").trim();
   const authorEmail = String(formData.get("authorEmail") || "").trim();
   const authorImage = String(formData.get("authorImage") || "").trim();
+  const sectionId = String(formData.get("sectionId") || "").trim();
   const caption = String(formData.get("caption") || "").trim().slice(0, 500);
   const files = formData.getAll("file").filter((file) => file instanceof File);
 
@@ -285,6 +286,7 @@ async function handleEventMediaUpload(request, response, eventSlug) {
       authorName,
       authorEmail,
       ...(authorImage ? { authorImage } : {}),
+      ...(sectionId ? { sectionId } : {}),
       createdAt: now
     });
   }

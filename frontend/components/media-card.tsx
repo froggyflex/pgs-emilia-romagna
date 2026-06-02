@@ -1,12 +1,24 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Heart, Maximize2, MessageCircle, X } from "lucide-react";
+import { Heart, MessageCircle, Play, X } from "lucide-react";
 import type { Comment, MediaItem } from "@/lib/types";
 import { getEmbeddableVideoUrl, isDirectVideoUrl } from "@/lib/media-url";
 import { CommentBox } from "./comment-box";
 
-export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { eventId: string; item: MediaItem; comments: Comment[]; viewerAuthenticated: boolean }) {
+export function MediaCard({
+  eventId,
+  item,
+  comments,
+  viewerAuthenticated,
+  scopeLabel = "Manifestazione generale"
+}: {
+  eventId: string;
+  item: MediaItem;
+  comments: Comment[];
+  viewerAuthenticated: boolean;
+  scopeLabel?: string;
+}) {
   const [likes, setLikes] = useState(item.likes || 0);
   const [message, setMessage] = useState("");
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -33,57 +45,81 @@ export function MediaCard({ eventId, item, comments, viewerAuthenticated }: { ev
   }
 
   return (
-    <article className="media-thumb media-card">
-      {item.type === "photo" ? (
-        <button className="media-preview-button" type="button" onClick={() => setIsViewerOpen(true)} aria-label="Apri foto intera">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.url} alt={item.title} />
-          <span><Maximize2 size={16} /> Apri</span>
+    <article className="media-thumb media-card media-smart-card">
+      <div className="media-smart-preview">
+        <button className="media-smart-open" type="button" onClick={() => setIsViewerOpen(true)} aria-label={`Apri ${item.title}`}>
+          <MediaVisual item={item} embedUrl={embedUrl} mode="thumb" />
+          <span className="media-scope-pill">{scopeLabel}</span>
+          {item.type === "video" ? <span className="media-play-pill"><Play size={16} /> Video</span> : null}
         </button>
-      ) : isDirectVideoUrl(item.url) ? (
-        <video className="embed media-video" src={item.url} controls />
-      ) : embedUrl ? (
-        <iframe className="embed" src={embedUrl} title={item.title} allowFullScreen />
-      ) : (
-        <a className="media-external-link" href={item.url} target="_blank" rel="noreferrer">Apri video</a>
-      )}
-      <div className="card-body media-card-body">
-        <div className="media-title-row">
-          <div>
-            <strong>{item.title}</strong>
-            <p className="muted">{item.caption}</p>
-            {item.authorName ? <p className="media-author">Condiviso da {item.authorName}</p> : null}
-          </div>
-          <button className="like-button" type="button" onClick={like} disabled={isPending} aria-label="Metti like">
-            <Heart size={17} /> {likes}
+        <div className="media-hero-actions" aria-label="Interazioni media">
+          <button className="media-hero-button" type="button" onClick={like} disabled={isPending} aria-label="Metti like">
+            <Heart size={16} /> {likes}
+          </button>
+          <button className="media-hero-button" type="button" onClick={() => setIsViewerOpen(true)} aria-label="Apri commenti">
+            <MessageCircle size={16} /> {comments.length}
           </button>
         </div>
-        <div className="media-comment-count">
-          <MessageCircle size={16} /> {comments.length} commenti
-        </div>
-        {message ? <p className="muted">{message}</p> : null}
-        {item.commentsEnabled ? (
-          <CommentBox eventId={eventId} targetType="media" targetId={item.id} comments={comments} compact viewerAuthenticated={viewerAuthenticated} />
-        ) : (
-          <div className="empty">Commenti disattivati per questo contenuto.</div>
-        )}
       </div>
-      {item.type === "photo" && isViewerOpen ? (
-        <div className="media-lightbox" role="dialog" aria-modal="true" aria-label={item.title}>
-          <button className="media-lightbox-backdrop" type="button" onClick={() => setIsViewerOpen(false)} aria-label="Chiudi foto" />
-          <div className="media-lightbox-content">
-            <button className="media-lightbox-close" type="button" onClick={() => setIsViewerOpen(false)} aria-label="Chiudi">
+      <div className="media-smart-caption">
+        <strong>{item.title}</strong>
+        {item.caption ? <p>{item.caption}</p> : null}
+        {item.authorName ? <span>Condiviso da {item.authorName}</span> : null}
+      </div>
+      {isViewerOpen ? (
+        <div className="media-viewer" role="dialog" aria-modal="true" aria-label={item.title}>
+          <button className="media-viewer-backdrop" type="button" onClick={() => setIsViewerOpen(false)} aria-label="Chiudi media" />
+          <div className="media-viewer-panel">
+            <button className="media-viewer-close" type="button" onClick={() => setIsViewerOpen(false)} aria-label="Chiudi">
               <X size={20} />
             </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="media-lightbox-image" src={item.url} alt={item.title} />
-            <div className="media-lightbox-caption">
-              <strong>{item.title}</strong>
-              {item.caption ? <span>{item.caption}</span> : null}
+            <div className="media-viewer-stage">
+              <MediaVisual item={item} embedUrl={embedUrl} mode="viewer" />
             </div>
+            <aside className="media-viewer-details">
+              <span className="media-scope-pill inline">{scopeLabel}</span>
+              <h3>{item.title}</h3>
+              {item.caption ? <p className="formatted-description">{item.caption}</p> : null}
+              {item.authorName ? <p className="media-author">Condiviso da {item.authorName}</p> : null}
+              <div className="media-viewer-stats">
+                <button className="like-button" type="button" onClick={like} disabled={isPending} aria-label="Metti like">
+                  <Heart size={17} /> {likes}
+                </button>
+                <span><MessageCircle size={16} /> {comments.length} commenti</span>
+              </div>
+              {message ? <p className="muted">{message}</p> : null}
+              {item.commentsEnabled ? (
+                <CommentBox eventId={eventId} targetType="media" targetId={item.id} comments={comments} compact viewerAuthenticated={viewerAuthenticated} />
+              ) : (
+                <div className="empty">Commenti disattivati per questo contenuto.</div>
+              )}
+            </aside>
           </div>
         </div>
       ) : null}
     </article>
+  );
+}
+
+function MediaVisual({ item, embedUrl, mode }: { item: MediaItem; embedUrl: string; mode: "thumb" | "viewer" }) {
+  if (item.type === "photo") {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img className={mode === "viewer" ? "media-viewer-image" : ""} src={item.url} alt={item.title} />
+    );
+  }
+
+  if (isDirectVideoUrl(item.url)) {
+    return <video className={mode === "viewer" ? "media-viewer-video" : "media-video-thumb"} src={item.url} controls={mode === "viewer"} muted={mode === "thumb"} />;
+  }
+
+  if (embedUrl) {
+    return <iframe className={mode === "viewer" ? "media-viewer-embed" : "media-embed-thumb"} src={embedUrl} title={item.title} allowFullScreen />;
+  }
+
+  return (
+    <span className="media-external-link">
+      Apri video
+    </span>
   );
 }

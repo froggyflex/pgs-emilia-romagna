@@ -15,10 +15,12 @@ type EventMediaUploadSession = {
 
 export function MediaContributionForm({
   eventSlug,
-  viewerIsAdmin
+  viewerIsAdmin,
+  sectionId
 }: {
   eventSlug: string;
   viewerIsAdmin: boolean;
+  sectionId?: string;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -81,6 +83,7 @@ export function MediaContributionForm({
       formData.set("authorName", session.authorName);
       formData.set("authorEmail", session.authorEmail);
       if (session.authorImage) formData.set("authorImage", session.authorImage);
+      if (sectionId) formData.set("sectionId", sectionId);
       Array.from(files).forEach((file) => formData.append("file", file));
 
       const response = await uploadWithProgress(session.uploadUrl, session.token, formData, (percent) => {

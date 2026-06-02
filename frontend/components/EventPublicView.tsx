@@ -60,6 +60,7 @@ export async function EventPublicView({
   const eventUrl = `${siteUrl}/events/${event.slug}`;
   const qrDataUrl = await QRCode.toDataURL(eventUrl, { margin: 1, width: 220 });
   const sections = getEventSections(event);
+  const sectionLabels = getSectionLabelMap(sections);
   const liveMatches = event.matches.filter((match) => match.status === "live").length;
   const programItems = sections.reduce((total, section) => total + (section.programItems?.length || 0), 0);
   const latestFeed = getLatestFeed(event.feed);
@@ -162,6 +163,7 @@ export async function EventPublicView({
               item={item}
               comments={mediaComments[item.id] || []}
               viewerAuthenticated={viewerAuthenticated}
+              scopeLabel={getMediaScopeLabel(item, sectionLabels)}
               key={item.id}
             />
           ))}
@@ -199,7 +201,7 @@ export async function EventSectionPublicView({
   viewerIsAdmin: boolean;
 }) {
   return section.type === "intrattenimento" ? (
-    <EntertainmentEventView event={event} section={section} comments={comments} viewerAuthenticated={viewerAuthenticated} />
+    <EntertainmentEventView event={event} section={section} comments={comments} mediaComments={mediaComments} viewerAuthenticated={viewerAuthenticated} viewerIsAdmin={viewerIsAdmin} />
   ) : (
     <ChampionshipEventView event={event} section={section} comments={comments} mediaComments={mediaComments} viewerAuthenticated={viewerAuthenticated} viewerIsAdmin={viewerIsAdmin} />
   );
@@ -233,6 +235,7 @@ async function ChampionshipEventView({
   const streamUrl = normalizeStreamingUrl(rawStreamUrl);
   const streamWatchUrl = getStreamingWatchUrl(rawStreamUrl, streamUrl);
   const totalMediaComments = Object.values(mediaComments).reduce((total, items) => total + items.length, 0);
+  const sectionLabels = getSectionLabelMap(getEventSections(event));
 
   return (
     <>
@@ -382,10 +385,17 @@ async function ChampionshipEventView({
               <p className="muted">Contenuti commentabili con like e conversazioni dedicate.</p>
             </div>
           </div>
-          <MediaContributionForm eventSlug={event.slug} viewerIsAdmin={viewerIsAdmin} />
+          <MediaContributionForm eventSlug={event.slug} viewerIsAdmin={viewerIsAdmin} sectionId={section.id} />
           <div className="media-grid">
             {media.map((item) => (
-              <MediaCard eventId={event.slug} item={item} comments={mediaComments[item.id] || []} viewerAuthenticated={viewerAuthenticated} key={item.id} />
+              <MediaCard
+                eventId={event.slug}
+                item={item}
+                comments={mediaComments[item.id] || []}
+                viewerAuthenticated={viewerAuthenticated}
+                scopeLabel={getMediaScopeLabel(item, sectionLabels)}
+                key={item.id}
+              />
             ))}
           </div>
         </div>
@@ -406,16 +416,22 @@ function EntertainmentEventView({
   event,
   section,
   comments,
-  viewerAuthenticated
+  mediaComments,
+  viewerAuthenticated,
+  viewerIsAdmin
 }: {
   event: EventRecord;
   section: EventSection;
   comments: Comment[];
+  mediaComments: Record<string, Comment[]>;
   viewerAuthenticated: boolean;
+  viewerIsAdmin: boolean;
 }) {
   const rawStreamUrl = section.streamUrl || "";
   const streamUrl = normalizeStreamingUrl(rawStreamUrl);
   const streamWatchUrl = getStreamingWatchUrl(rawStreamUrl, streamUrl);
+  const media = getSectionItems(event.media, section, getFirstCampionatoId(event));
+  const sectionLabels = getSectionLabelMap(getEventSections(event));
 
   return (
     <>
@@ -481,6 +497,32 @@ function EntertainmentEventView({
         </div>
       </section>
 
+      <section className="section card" id="media">
+        <div className="card-body">
+          <div className="public-section-heading">
+            <div>
+              <span className="small-label">Foto e video</span>
+              <h2>Media evento</h2>
+              <p className="muted">Contenuti ufficiali collegati a questo evento.</p>
+            </div>
+          </div>
+          <MediaContributionForm eventSlug={event.slug} viewerIsAdmin={viewerIsAdmin} sectionId={section.id} />
+          {media.length === 0 ? <div className="empty">Nessun contenuto media pubblicato.</div> : null}
+          <div className="media-grid">
+            {media.map((item) => (
+              <MediaCard
+                eventId={event.slug}
+                item={item}
+                comments={mediaComments[item.id] || []}
+                viewerAuthenticated={viewerAuthenticated}
+                scopeLabel={getMediaScopeLabel(item, sectionLabels)}
+                key={item.id}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="section card" id="commenti">
         <div className="card-body">
           <span className="small-label">Discussione evento</span>
@@ -499,6 +541,15 @@ function getSectionItems<T extends { sectionId?: string }>(items: T[], section: 
     return items.filter((item) => !item.sectionId);
   }
   return [];
+}
+
+function getSectionLabelMap(sections: EventSection[]) {
+  return new Map(sections.map((section) => [section.id, section.title]));
+}
+
+function getMediaScopeLabel(item: { sectionId?: string }, sectionLabels: Map<string, string>) {
+  if (!item.sectionId) return "Manifestazione generale";
+  return sectionLabels.get(item.sectionId) || "Evento interno";
 }
 
 function isDonBoscoCupEvent(event: EventRecord) {
