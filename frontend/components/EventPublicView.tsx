@@ -103,26 +103,14 @@ export async function EventPublicView({
         <div className="stat-card"><strong>{programItems}</strong><p>Punti programma</p></div>
       </section>
 
-      <InternalEventsSection event={event} sections={sections} />
-
-      {mainStreamUrl ? (
-        <StreamingPanel
-          id="streaming"
-          title="Streaming TV"
-          text="Diretta principale della manifestazione, visibile anche senza entrare nel singolo campionato."
-          streamUrl={mainStreamUrl}
-          watchUrl={mainStreamWatchUrl}
-        />
-      ) : null}
-
       {latestFeed.length > 0 ? (
         <section className="section main-feed-section">
-          <div className="public-section-heading">
+          <div className="main-feed-alert-heading">
             <div>
-              <span className="small-label">Ultimi aggiornamenti</span>
-              <h2>Feed della manifestazione</h2>
-              <p className="muted">Le comunicazioni piu recenti pubblicate dagli operatori.</p>
+              <span className="small-label">Notifiche</span>
+              <h2>Ultimi aggiornamenti</h2>
             </div>
+            <span className="status">{latestFeed.length} nuove</span>
           </div>
           <div className="main-feed-list">
             {latestFeed.map((post) => {
@@ -145,6 +133,16 @@ export async function EventPublicView({
             })}
           </div>
         </section>
+      ) : null}
+
+      {mainStreamUrl ? (
+        <StreamingPanel
+          id="streaming"
+          title="Streaming TV"
+          text="Diretta principale della manifestazione, visibile anche senza entrare nel singolo campionato."
+          streamUrl={mainStreamUrl}
+          watchUrl={mainStreamWatchUrl}
+        />
       ) : null}
 
       <section className="section main-media-section" id="media">
@@ -181,6 +179,8 @@ export async function EventPublicView({
           <ShareCodeControls url={eventUrl} qrDataUrl={qrDataUrl} fileName={`${event.slug}-qr.png`} />
         </div>
       </section>
+
+      <InternalEventsSection event={event} sections={sections} />
     </>
   );
 }
@@ -594,14 +594,15 @@ function getRankingCell(row: RankingRow, column: string) {
 
 function InternalEventsSection({ event, sections }: { event: EventRecord; sections: EventSection[] }) {
   return (
-    <section className="section internal-events-section" id="eventi-interni">
-      <div className="public-section-heading">
+    <details className="section internal-events-section internal-events-collapsible" id="eventi-interni">
+      <summary>
         <div>
           <span className="small-label">Eventi della manifestazione</span>
           <h2>Scegli cosa seguire</h2>
-          <p className="muted">Ogni evento interno ha una pagina dedicata con il contenuto corretto per il suo tipo.</p>
+          <p className="muted">{sections.length} eventi interni disponibili.</p>
         </div>
-      </div>
+        <span className="button internal-events-toggle">Apri elenco</span>
+      </summary>
       <div className="internal-event-grid">
         {sections.length === 0 ? <div className="empty">Nessun evento interno configurato.</div> : null}
         {sections.map((section) => (
@@ -620,7 +621,7 @@ function InternalEventsSection({ event, sections }: { event: EventRecord; sectio
           </Link>
         ))}
       </div>
-    </section>
+    </details>
   );
 }
 

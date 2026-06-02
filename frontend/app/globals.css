@@ -606,12 +606,50 @@ h3 {
   box-shadow: 0 10px 28px rgba(16, 24, 40, 0.06);
 }
 
+.internal-events-collapsible {
+  display: block;
+}
+
+.internal-events-collapsible summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.internal-events-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.internal-events-collapsible[open] .internal-event-grid {
+  margin-top: 16px;
+}
+
+.internal-events-collapsible[open] .internal-events-toggle {
+  background: #fff;
+  color: var(--blue);
+}
+
 .main-feed-section {
-  padding: 18px;
+  padding: 12px 14px;
   border: 1px solid rgba(227, 6, 19, 0.15);
   border-radius: 8px;
-  background: linear-gradient(135deg, #ffffff, #fff7f8);
-  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.06);
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(16, 24, 40, 0.05);
+}
+
+.main-feed-alert-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.main-feed-alert-heading h2 {
+  margin: 0;
+  font-size: 1.18rem;
 }
 
 .main-media-section {
@@ -628,19 +666,19 @@ h3 {
 
 .main-feed-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .main-feed-card {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 7px;
+  min-height: 112px;
+  padding: 10px;
   border: 1px solid #f3c4ca;
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 8px 22px rgba(16, 24, 40, 0.05);
+  background: #fff8f9;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
@@ -653,6 +691,8 @@ h3 {
 .main-feed-card p {
   margin: 0;
   color: #344054;
+  font-size: 0.88rem;
+  line-height: 1.35;
 }
 
 .main-feed-meta {
@@ -3262,12 +3302,24 @@ h3 {
   .match-schedule-controls,
   .schedule-legend,
   .schedule-match-card,
-  .main-feed-list,
   .analytics-stat-grid,
   .analytics-grid,
   .analytics-count-row,
   .recent-visit-row {
     grid-template-columns: 1fr;
+  }
+
+  .main-feed-list {
+    grid-template-columns: 1fr;
+  }
+
+  .internal-events-collapsible summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .internal-events-toggle {
+    width: 100%;
   }
 
   .quick-access-actions,
