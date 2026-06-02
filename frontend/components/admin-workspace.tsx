@@ -25,6 +25,7 @@ export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[
   const [statusFilter, setStatusFilter] = useState<"all" | EventStatus>("all");
   const [pendingSlug, setPendingSlug] = useState<string | null>(null);
   const [confirmDeleteSlug, setConfirmDeleteSlug] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
   const [isCreating, startCreate] = useTransition();
 
   const filteredEvents = useMemo(() => {
@@ -57,9 +58,16 @@ export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[
 
   async function changeStatus(event: EventRecord, status: EventStatus) {
     setPendingSlug(event.slug);
-    const updated = await saveEvent({ ...event, status });
-    setEvents((items) => items.map((item) => (item.slug === event.slug ? updated : item)));
-    setPendingSlug(null);
+    setMessage("");
+
+    try {
+      const updated = await saveEvent({ ...event, status });
+      setEvents((items) => items.map((item) => (item.slug === event.slug ? updated : item)));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Stato non salvato.");
+    } finally {
+      setPendingSlug(null);
+    }
   }
 
   async function deleteEvent(event: EventRecord) {
@@ -118,6 +126,7 @@ export function AdminWorkspace({ events: initialEvents }: { events: EventRecord[
             </select>
           </div>
         </div>
+        {message ? <div className="status error admin-inline-error">{message}</div> : null}
 
         <div className="event-table">
           {filteredEvents.length === 0 ? (
@@ -186,7 +195,8 @@ async function saveEvent(event: EventRecord) {
   });
 
   if (!response.ok) {
-    throw new Error("Event save failed");
+    const payload = await response.json().catch(() => null) as { message?: string } | null;
+    throw new Error(payload?.message || "Salvataggio evento non riuscito.");
   }
 
   return await response.json() as EventRecord;

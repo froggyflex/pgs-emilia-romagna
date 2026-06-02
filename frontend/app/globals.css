@@ -694,6 +694,101 @@ h3 {
   margin-top: 14px;
 }
 
+.main-media-index-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.main-media-index-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 96px;
+  padding: 14px;
+  border: 1px solid rgba(21, 66, 127, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--text);
+  text-decoration: none;
+  box-shadow: 0 8px 22px rgba(16, 24, 40, 0.05);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.main-media-index-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(21, 66, 127, 0.28);
+  box-shadow: 0 16px 34px rgba(16, 24, 40, 0.1);
+}
+
+.media-index-icon {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #eef6ff;
+  color: var(--blue);
+}
+
+.media-index-icon-campionato {
+  background: #eef6ff;
+}
+
+.media-index-icon-intrattenimento {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.media-index-icon-general {
+  background: #ecfdf3;
+  color: #087443;
+}
+
+.main-media-index-card strong {
+  display: block;
+  color: var(--blue);
+}
+
+.main-media-index-card p {
+  margin: 3px 0 0;
+  color: #667085;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.media-index-count {
+  display: inline-flex;
+  min-width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--blue);
+  color: #fff;
+  font-weight: 900;
+}
+
+.main-general-media-strip {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(21, 66, 127, 0.14);
+}
+
+.main-general-media-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.main-general-media-heading strong {
+  color: var(--blue);
+}
+
 .main-feed-list {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3355,6 +3450,10 @@ h3 {
   }
 
   .main-feed-list {
+    grid-template-columns: 1fr;
+  }
+
+  .main-media-index-grid {
     grid-template-columns: 1fr;
   }
 

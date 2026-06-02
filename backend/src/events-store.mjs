@@ -37,7 +37,8 @@ export async function listEvents(includeDrafts = false) {
     }
 
     const events = getMemoryEvents();
-    return includeDrafts ? events : events.filter((event) => PUBLIC_EVENT_STATUSES.includes(event.status));
+    const visibleEvents = includeDrafts ? events : events.filter((event) => PUBLIC_EVENT_STATUSES.includes(event.status));
+    return visibleEvents.map(serializeEvent);
   }
 
   const query = includeDrafts ? {} : { status: { $in: PUBLIC_EVENT_STATUSES } };
@@ -54,7 +55,8 @@ export async function getEventBySlug(slug, includeDrafts = false) {
       throw new Error("MongoDB is not reachable. Admin event data cannot be loaded safely.");
     }
 
-    return getMemoryEvents().find((event) => event.slug === slug && (includeDrafts || PUBLIC_EVENT_STATUSES.includes(event.status))) || null;
+    const event = getMemoryEvents().find((item) => item.slug === slug && (includeDrafts || PUBLIC_EVENT_STATUSES.includes(item.status))) || null;
+    return event ? serializeEvent(event) : null;
   }
 
   const query = includeDrafts ? { slug } : { slug, status: { $in: PUBLIC_EVENT_STATUSES } };
@@ -65,7 +67,7 @@ export async function getEventBySlug(slug, includeDrafts = false) {
 export async function upsertEvent(event) {
   const db = await getWriteDb();
   const updatedAt = new Date().toISOString();
-  const payload = { ...event, updatedAt };
+  const payload = normalizeEventForStorage({ ...event, updatedAt });
 
   if (!db) {
     const events = getMemoryEvents();
@@ -83,7 +85,7 @@ export async function upsertEvent(event) {
     }
 
     memoryStore.__PGS_EVENTS__ = events;
-    return saved;
+    return serializeEvent(saved);
   }
 
   if (event._id) {
@@ -238,7 +240,11 @@ async function getWriteDb() {
 
 function serializeEvent(event) {
   const { _id, ...rest } = event;
-  return { ...rest, _id: _id?.toString() };
+  return {
+    ...rest,
+    status: rest.completed && rest.status === "published" ? "completed" : rest.status,
+    _id: _id?.toString()
+  };
 }
 
 function serializeComment(comment) {
@@ -250,4 +256,21 @@ function httpError(status, message) {
   const error = new Error(message);
   error.status = status;
   return error;
+}
+
+function normalizeEventForStorage(event) {
+  if (event.status === "completed") {
+    return {
+      ...event,
+      status: "published",
+      completed: true,
+      completedAt: event.completedAt || new Date().toISOString()
+    };
+  }
+
+  return {
+    ...event,
+    completed: false,
+    completedAt: ""
+  };
 }

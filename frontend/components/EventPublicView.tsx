@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import QRCode from "qrcode";
-import { ArrowLeft, CalendarDays, MapPin, MessageCircle, PartyPopper, Radio, RefreshCw, Trophy, Video } from "lucide-react";
+import { ArrowLeft, CalendarDays, Images, MapPin, MessageCircle, PartyPopper, Radio, RefreshCw, Trophy, Video } from "lucide-react";
 import type { Comment, EventRecord, EventSection, FeedPost, RankingRow } from "@/lib/types";
 import { getPublicBaseUrl } from "@/lib/public-url";
 import { CommentBox } from "./comment-box";
@@ -72,7 +72,8 @@ export async function EventPublicView({
   const eventUrl = `${siteUrl}/events/${event.slug}`;
   const qrDataUrl = await QRCode.toDataURL(eventUrl, { margin: 1, width: 220 });
   const sections = getEventSections(event);
-  const sectionLabels = getSectionLabelMap(sections);
+  const generalMedia = event.media.filter((item) => !item.sectionId);
+  const mediaIndex = getMediaIndexGroups(event, sections);
   const liveMatches = event.matches.filter((match) => match.status === "live").length;
   const programItems = sections.reduce((total, section) => total + (section.programItems?.length || 0), 0);
   const latestFeed = getLatestFeed(event.feed);
@@ -163,23 +164,56 @@ export async function EventPublicView({
           <div>
             <span className="small-label">Foto e video</span>
             <h2>Media della manifestazione</h2>
-            <p className="muted">Contenuti ufficiali caricati dagli amministratori, commentabili e con like.</p>
+            <p className="muted">Scegli una categoria per vedere foto, video, like e commenti collegati.</p>
           </div>
         </div>
         {event.media.length === 0 ? <div className="empty">Nessun contenuto media pubblicato.</div> : null}
-        <div className="media-grid main-event-media-grid">
-          {event.media.map((item) => (
-            <MediaCard
-              eventId={event.slug}
-              item={item}
-              comments={mediaComments[item.id] || []}
-              viewerAuthenticated={viewerAuthenticated}
-              scopeLabel={getMediaScopeLabel(item, sectionLabels)}
-              scopeHref={getMediaScopeHref(event, item, sections)}
-              key={item.id}
-            />
-          ))}
+        <div className="main-media-index-grid">
+          {mediaIndex.map((group) => {
+            const card = (
+              <>
+                <span className={`media-index-icon media-index-icon-${group.type}`}>
+                  {group.type === "general" ? <Images size={22} /> : group.type === "campionato" ? <Trophy size={22} /> : <PartyPopper size={22} />}
+                </span>
+                <div>
+                  <strong>{group.title}</strong>
+                  <p>{group.description}</p>
+                </div>
+                <span className="media-index-count">{group.count}</span>
+              </>
+            );
+
+            return group.href ? (
+              <Link className="main-media-index-card" href={group.href} key={group.id}>
+                {card}
+              </Link>
+            ) : (
+              <div className="main-media-index-card" key={group.id}>
+                {card}
+              </div>
+            );
+          })}
         </div>
+        {generalMedia.length > 0 ? (
+          <div className="main-general-media-strip" id="media-generale">
+            <div className="main-general-media-heading">
+              <span className="small-label">Manifestazione generale</span>
+              <strong>{generalMedia.length} media</strong>
+            </div>
+            <div className="media-grid main-event-media-grid">
+              {generalMedia.map((item) => (
+                <MediaCard
+                  eventId={event.slug}
+                  item={item}
+                  comments={mediaComments[item.id] || []}
+                  viewerAuthenticated={viewerAuthenticated}
+                  scopeLabel="Manifestazione generale"
+                  key={item.id}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="section card" id="qr">
@@ -572,6 +606,33 @@ function getMediaScopeHref(event: EventRecord, item: { sectionId?: string }, sec
   if (!item.sectionId) return undefined;
   const section = sections.find((candidate) => candidate.id === item.sectionId);
   return section ? `/events/${event.slug}/${section.slug}` : undefined;
+}
+
+function getMediaIndexGroups(event: EventRecord, sections: EventSection[]) {
+  const generalCount = event.media.filter((item) => !item.sectionId).length;
+  const groups = [
+    {
+      id: "general",
+      type: "general",
+      title: "Manifestazione generale",
+      description: "Media collegati alla pagina principale.",
+      count: generalCount,
+      href: "#media-generale"
+    }
+  ];
+
+  for (const section of sections) {
+    groups.push({
+      id: section.id,
+      type: section.type,
+      title: section.title,
+      description: section.type === "campionato" ? "Media del campionato." : "Media dell'evento di intrattenimento.",
+      count: event.media.filter((item) => item.sectionId === section.id).length,
+      href: `/events/${event.slug}/${section.slug}#media`
+    });
+  }
+
+  return groups.filter((group) => group.count > 0);
 }
 
 function isDonBoscoCupEvent(event: EventRecord) {
