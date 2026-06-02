@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Heart, MessageCircle, Play, X } from "lucide-react";
 import type { Comment, MediaItem } from "@/lib/types";
@@ -11,13 +12,15 @@ export function MediaCard({
   item,
   comments,
   viewerAuthenticated,
-  scopeLabel = "Manifestazione generale"
+  scopeLabel = "Manifestazione generale",
+  scopeHref
 }: {
   eventId: string;
   item: MediaItem;
   comments: Comment[];
   viewerAuthenticated: boolean;
   scopeLabel?: string;
+  scopeHref?: string;
 }) {
   const [likes, setLikes] = useState(item.likes || 0);
   const [message, setMessage] = useState("");
@@ -49,9 +52,9 @@ export function MediaCard({
       <div className="media-smart-preview">
         <button className="media-smart-open" type="button" onClick={() => setIsViewerOpen(true)} aria-label={`Apri ${item.title}`}>
           <MediaVisual item={item} embedUrl={embedUrl} mode="thumb" />
-          <span className="media-scope-pill">{scopeLabel}</span>
           {item.type === "video" ? <span className="media-play-pill"><Play size={16} /> Video</span> : null}
         </button>
+        <ScopeBadge label={scopeLabel} href={scopeHref} />
         <div className="media-hero-actions" aria-label="Interazioni media">
           <button className="media-hero-button" type="button" onClick={like} disabled={isPending} aria-label="Metti like">
             <Heart size={16} /> {likes}
@@ -77,7 +80,7 @@ export function MediaCard({
               <MediaVisual item={item} embedUrl={embedUrl} mode="viewer" />
             </div>
             <aside className="media-viewer-details">
-              <span className="media-scope-pill inline">{scopeLabel}</span>
+              <ScopeBadge label={scopeLabel} href={scopeHref} inline />
               <h3>{item.title}</h3>
               {item.caption ? <p className="formatted-description">{item.caption}</p> : null}
               {item.authorName ? <p className="media-author">Condiviso da {item.authorName}</p> : null}
@@ -99,6 +102,16 @@ export function MediaCard({
       ) : null}
     </article>
   );
+}
+
+function ScopeBadge({ label, href, inline = false }: { label: string; href?: string; inline?: boolean }) {
+  const className = `media-scope-pill ${inline ? "inline" : ""} ${href ? "clickable" : ""}`;
+
+  if (href) {
+    return <Link className={className} href={href}>{label}</Link>;
+  }
+
+  return <span className={className}>{label}</span>;
 }
 
 function MediaVisual({ item, embedUrl, mode }: { item: MediaItem; embedUrl: string; mode: "thumb" | "viewer" }) {

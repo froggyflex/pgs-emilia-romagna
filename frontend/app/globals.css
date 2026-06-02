@@ -1741,6 +1741,16 @@ h3 {
   background: #eef6ff;
 }
 
+.media-scope-pill.clickable {
+  text-decoration: none;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.media-scope-pill.clickable:hover {
+  transform: translateY(-1px);
+  background: #fff;
+}
+
 .media-smart-caption {
   display: grid;
   gap: 4px;

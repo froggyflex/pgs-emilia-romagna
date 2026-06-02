@@ -162,6 +162,7 @@ export async function EventPublicView({
               comments={mediaComments[item.id] || []}
               viewerAuthenticated={viewerAuthenticated}
               scopeLabel={getMediaScopeLabel(item, sectionLabels)}
+              scopeHref={getMediaScopeHref(event, item, sections)}
               key={item.id}
             />
           ))}
@@ -394,6 +395,7 @@ async function ChampionshipEventView({
                 comments={mediaComments[item.id] || []}
                 viewerAuthenticated={viewerAuthenticated}
                 scopeLabel={getMediaScopeLabel(item, sectionLabels)}
+                scopeHref={getMediaScopeHref(event, item, getEventSections(event))}
                 key={item.id}
               />
             ))}
@@ -516,6 +518,7 @@ function EntertainmentEventView({
                 comments={mediaComments[item.id] || []}
                 viewerAuthenticated={viewerAuthenticated}
                 scopeLabel={getMediaScopeLabel(item, sectionLabels)}
+                scopeHref={getMediaScopeHref(event, item, getEventSections(event))}
                 key={item.id}
               />
             ))}
@@ -550,6 +553,12 @@ function getSectionLabelMap(sections: EventSection[]) {
 function getMediaScopeLabel(item: { sectionId?: string }, sectionLabels: Map<string, string>) {
   if (!item.sectionId) return "Manifestazione generale";
   return sectionLabels.get(item.sectionId) || "Evento interno";
+}
+
+function getMediaScopeHref(event: EventRecord, item: { sectionId?: string }, sections: EventSection[]) {
+  if (!item.sectionId) return undefined;
+  const section = sections.find((candidate) => candidate.id === item.sectionId);
+  return section ? `/events/${event.slug}/${section.slug}` : undefined;
 }
 
 function isDonBoscoCupEvent(event: EventRecord) {
