@@ -35,6 +35,7 @@ const statusLabels: Record<EventStatus, string> = {
   draft: "Bozza",
   updating: "In lavorazione",
   published: "Pubblicato",
+  completed: "Completato",
   archived: "Archiviato"
 };
 
@@ -448,6 +449,7 @@ function DetailsEditor({ event, onChange }: EditorProps) {
             <option value="draft">Bozza</option>
             <option value="updating">In lavorazione</option>
             <option value="published">Pubblicato</option>
+            <option value="completed">Completato</option>
             <option value="archived">Archiviato</option>
           </select>
         </label>

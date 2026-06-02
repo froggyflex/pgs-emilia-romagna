@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
-import { EventSectionPublicView, EventUnavailableView, getEventSections } from "@/components/EventPublicView";
+import { EventCompletedNotice, EventSectionPublicView, EventUnavailableView, getEventSections } from "@/components/EventPublicView";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { getEventBySlug, listComments } from "@/lib/backend-api";
 import { isAdminEmail, safeAuth } from "@/auth";
@@ -55,6 +55,7 @@ export default async function EventSectionPage({ params }: { params: Promise<{ s
       <SiteHeader />
       <div className="page">
         <AnalyticsTracker eventSlug={event.slug} sectionSlug={section.slug} />
+        {event.status === "completed" ? <EventCompletedNotice event={event} /> : null}
         <EventSectionPublicView
           event={event}
           section={section}

@@ -68,15 +68,16 @@ export default async function Home() {
             {events.map((event) => {
               const isLive = event.matches.some((match) => match.status === "live");
               const isUpdating = event.status === "updating";
+              const isCompleted = event.status === "completed";
 
               return (
-                <Link className={`event-list-row ${isUpdating ? "event-list-row-updating" : ""}`} href={`/events/${event.slug}`} key={event.slug}>
+                <Link className={`event-list-row ${isUpdating ? "event-list-row-updating" : ""} ${isCompleted ? "event-list-row-completed" : ""}`} href={`/events/${event.slug}`} key={event.slug}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={event.coverImage} alt={event.title} />
                   <div className="event-list-main">
                     <div className="event-row-title">
                       <h3>{event.title}</h3>
-                      {isUpdating ? <span className="status status-updating">In lavorazione</span> : isLive ? <span className="status live">Live</span> : <span className="status">Online</span>}
+                      {isUpdating ? <span className="status status-updating">In lavorazione</span> : isCompleted ? <span className="status status-completed">Completato</span> : isLive ? <span className="status live">Live</span> : <span className="status">Online</span>}
                     </div>
                     <p>{event.subtitle}</p>
                     <div className="event-row-stats">
@@ -87,8 +88,8 @@ export default async function Home() {
                     </div>
                   </div>
                   <div className="event-list-side">
-                    <span className="small-label">{isUpdating ? "Stato evento" : "Ultimo aggiornamento"}</span>
-                    <strong>{isUpdating ? "Pagina in aggiornamento" : latestFeed(event)}</strong>
+                    <span className="small-label">{isUpdating || isCompleted ? "Stato evento" : "Ultimo aggiornamento"}</span>
+                    <strong>{isUpdating ? "Pagina in aggiornamento" : isCompleted ? "Evento concluso" : latestFeed(event)}</strong>
                     <span className={isUpdating ? "ghost-button" : "button"}>{isUpdating ? "Vedi stato" : "Apri evento"}</span>
                   </div>
                 </Link>

@@ -5,7 +5,7 @@ import { seedComments, seedEvents } from "./seed-data.mjs";
 
 const EVENTS = "events";
 const COMMENTS = "comments";
-const PUBLIC_EVENT_STATUSES = ["published", "updating"];
+const PUBLIC_EVENT_STATUSES = ["published", "updating", "completed"];
 const memoryStore = globalThis;
 
 function clone(value) {
@@ -162,7 +162,7 @@ export async function addEventMedia(eventSlug, mediaItems) {
   const db = await getWriteDb();
 
   if (!db) {
-    const event = getMemoryEvents().find((item) => item.slug === eventSlug && item.status === "published");
+    const event = getMemoryEvents().find((item) => item.slug === eventSlug && ["published", "completed"].includes(item.status));
 
     if (!event) {
       return null;
@@ -174,7 +174,7 @@ export async function addEventMedia(eventSlug, mediaItems) {
   }
 
   const result = await db.collection(EVENTS).updateOne(
-    { slug: eventSlug, status: "published" },
+    { slug: eventSlug, status: { $in: ["published", "completed"] } },
     {
       $push: { media: { $each: mediaItems, $position: 0 } },
       $set: { updatedAt: new Date().toISOString() }

@@ -27,6 +27,18 @@ export function EventUnavailableView({ event }: { event: EventRecord }) {
   );
 }
 
+export function EventCompletedNotice({ event }: { event: EventRecord }) {
+  return (
+    <section className="event-completed-notice" aria-label="Evento completato">
+      <div>
+        <span className="small-label">Evento completato</span>
+        <strong>{event.title} si e concluso.</strong>
+      </div>
+      <p>Puoi ancora consultare media, feed, classifiche, QR e contenuti pubblicati dagli organizzatori.</p>
+    </section>
+  );
+}
+
 export function getEventSections(event: EventRecord): EventSection[] {
   if (Array.isArray(event.sections)) return event.sections;
 
@@ -72,6 +84,7 @@ export async function EventPublicView({
   return (
     <>
       {hasSoundtrack ? <MainEventSoundtrack src="/uploads/soundtrack.mpeg" /> : null}
+      {event.status === "completed" ? <EventCompletedNotice event={event} /> : null}
       <section className="hero event-hero main-event-hero">
         <div className="hero-copy">
           <span className="kicker"><Radio size={16} /> Manifestazione principale</span>

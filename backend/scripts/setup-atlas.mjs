@@ -21,7 +21,7 @@ const eventValidator = {
     properties: {
       slug: { bsonType: "string" },
       title: { bsonType: "string" },
-      status: { enum: ["draft", "updating", "published", "archived"] },
+      status: { enum: ["draft", "updating", "published", "completed", "archived"] },
       sections: { bsonType: ["array", "null"] },
       matches: { bsonType: "array" },
       rankingColumns: { bsonType: ["array", "null"] },
