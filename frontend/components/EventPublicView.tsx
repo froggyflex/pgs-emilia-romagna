@@ -72,7 +72,7 @@ export async function EventPublicView({
   const eventUrl = `${siteUrl}/events/${event.slug}`;
   const qrDataUrl = await QRCode.toDataURL(eventUrl, { margin: 1, width: 220 });
   const sections = getEventSections(event);
-  const generalMedia = event.media.filter((item) => !item.sectionId);
+  const generalMedia = sortMediaVideosFirst(event.media.filter((item) => !item.sectionId));
   const mediaIndex = getMediaIndexGroups(event, sections);
   const liveMatches = event.matches.filter((match) => match.status === "live").length;
   const programItems = sections.reduce((total, section) => total + (section.programItems?.length || 0), 0);
@@ -275,7 +275,7 @@ async function ChampionshipEventView({
   const qrDataUrl = await QRCode.toDataURL(sectionUrl, { margin: 1, width: 220 });
   const matches = getSectionItems(event.matches, section, getFirstCampionatoId(event));
   const rankings = getSectionItems(event.rankings, section, getFirstCampionatoId(event));
-  const media = getSectionItems(event.media, section, getFirstCampionatoId(event));
+  const media = sortMediaVideosFirst(getSectionItems(event.media, section, getFirstCampionatoId(event)));
   const feed = getSectionItems(event.feed, section, getFirstCampionatoId(event));
   const liveMatch = matches.find((match) => match.status === "live");
   const rankingColumns = getRankingColumns(event, rankings);
@@ -479,7 +479,7 @@ function EntertainmentEventView({
   const rawStreamUrl = section.streamUrl || "";
   const streamUrl = normalizeStreamingUrl(rawStreamUrl);
   const streamWatchUrl = getStreamingWatchUrl(rawStreamUrl, streamUrl);
-  const media = getSectionItems(event.media, section, getFirstCampionatoId(event));
+  const media = sortMediaVideosFirst(getSectionItems(event.media, section, getFirstCampionatoId(event)));
   const sectionLabels = getSectionLabelMap(getEventSections(event));
 
   return (
@@ -606,6 +606,13 @@ function getMediaScopeHref(event: EventRecord, item: { sectionId?: string }, sec
   if (!item.sectionId) return undefined;
   const section = sections.find((candidate) => candidate.id === item.sectionId);
   return section ? `/events/${event.slug}/${section.slug}` : undefined;
+}
+
+function sortMediaVideosFirst<T extends { type: "photo" | "video"; createdAt?: string }>(media: T[]) {
+  return [...media].sort((a, b) => {
+    if (a.type !== b.type) return a.type === "video" ? -1 : 1;
+    return (b.createdAt || "").localeCompare(a.createdAt || "");
+  });
 }
 
 function getMediaIndexGroups(event: EventRecord, sections: EventSection[]) {
